@@ -9,12 +9,7 @@ class EditProfileScreen extends StatefulWidget {
   final String? token;
   final Map<String, dynamic>? userData;
 
-  const EditProfileScreen({
-    super.key,
-    this.userId,
-    this.token,
-    this.userData,
-  });
+  const EditProfileScreen({super.key, this.userId, this.token, this.userData});
 
   @override
   State<EditProfileScreen> createState() => _EditProfileScreenState();
@@ -35,7 +30,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   File? _selectedImage;
   bool _loading = false;
   bool _hasChanges = false;
-  bool _imageRemoved = false; // Nueva variable para track si se eliminó la imagen
+  bool _imageRemoved =
+      false; // Nueva variable para track si se eliminó la imagen
   final ImagePicker _picker = ImagePicker();
 
   @override
@@ -66,14 +62,23 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   void _checkForChanges() {
-    final hasNameChange = _nombreController.text.trim() != (_originalNombre ?? '');
-    final hasPhoneChange = _telefonoController.text.trim() != (_originalTelefono ?? '');
-    final hasEmailChange = _emailController.text.trim() != (_originalEmail ?? '');
-    final hasCedulaChange = _cedulaController.text.trim() != (_originalCedula ?? '');
+    final hasNameChange =
+        _nombreController.text.trim() != (_originalNombre ?? '');
+    final hasPhoneChange =
+        _telefonoController.text.trim() != (_originalTelefono ?? '');
+    final hasEmailChange =
+        _emailController.text.trim() != (_originalEmail ?? '');
+    final hasCedulaChange =
+        _cedulaController.text.trim() != (_originalCedula ?? '');
     final hasImageChange = _selectedImage != null || _imageRemoved;
 
     setState(() {
-      _hasChanges = hasNameChange || hasPhoneChange || hasEmailChange || hasCedulaChange || hasImageChange;
+      _hasChanges =
+          hasNameChange ||
+          hasPhoneChange ||
+          hasEmailChange ||
+          hasCedulaChange ||
+          hasImageChange;
     });
   }
 
@@ -128,7 +133,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         _pickImage(ImageSource.gallery);
                       },
                     ),
-                    if (_selectedImage != null || (_originalFoto != null && _originalFoto!.isNotEmpty && !_imageRemoved))
+                    if (_selectedImage != null ||
+                        (_originalFoto != null &&
+                            _originalFoto!.isNotEmpty &&
+                            !_imageRemoved))
                       _buildImageOption(
                         icon: Icons.delete,
                         label: 'Eliminar',
@@ -171,11 +179,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               color: (color ?? AppColors.primary).withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              icon,
-              size: 30,
-              color: color ?? AppColors.primary,
-            ),
+            child: Icon(icon, size: 30, color: color ?? AppColors.primary),
           ),
           const SizedBox(height: 8),
           Text(
@@ -203,7 +207,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (pickedFile != null) {
         setState(() {
           _selectedImage = File(pickedFile.path);
-          _imageRemoved = false; // Reset removed flag cuando se selecciona nueva imagen
+          _imageRemoved =
+              false; // Reset removed flag cuando se selecciona nueva imagen
         });
         _checkForChanges();
 
@@ -282,7 +287,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (phone.startsWith('09')) {
       // Teléfono móvil - validar que el tercer dígito sea válido
       final thirdDigit = phone[2];
-      if (!['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'].contains(thirdDigit)) {
+      if (![
+        '0',
+        '1',
+        '2',
+        '3',
+        '4',
+        '5',
+        '6',
+        '7',
+        '8',
+        '9',
+      ].contains(thirdDigit)) {
         return 'Formato de móvil inválido';
       }
     } else {
@@ -384,10 +400,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         });
 
         // Regresar con los datos actualizados
-        Navigator.of(context).pop({
-          'success': true,
-          'userData': response.data?.toCompatibleMap(),
-        });
+        Navigator.of(
+          context,
+        ).pop({'success': true, 'userData': response.data?.toCompatibleMap()});
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -410,6 +425,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       setState(() => _loading = false);
     }
   }
+
   // Widget para mostrar la imagen de perfil con indicadores visuales
   Widget _buildProfileImage() {
     Widget imageWidget;
@@ -503,7 +519,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-// Widget para mostrar placeholder cuando no hay imagen
+  // Widget para mostrar placeholder cuando no hay imagen
   Widget _buildPlaceholderImage() {
     return Container(
       width: 120,
@@ -513,11 +529,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         color: AppColors.primary.withOpacity(0.1),
         border: Border.all(color: AppColors.primary.withOpacity(0.3), width: 2),
       ),
-      child: const Icon(
-        Icons.person,
-        size: 60,
-        color: AppColors.primary,
-      ),
+      child: const Icon(Icons.person, size: 60, color: AppColors.primary),
     );
   }
 
@@ -595,8 +607,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 child: ElevatedButton(
                   onPressed: (_hasChanges && !_loading) ? _saveProfile : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _hasChanges ? AppColors.primary : AppColors.gray300,
-                    foregroundColor: _hasChanges ? Colors.white : AppColors.gray500,
+                    backgroundColor: _hasChanges
+                        ? AppColors.primary
+                        : AppColors.gray300,
+                    foregroundColor: _hasChanges
+                        ? Colors.white
+                        : AppColors.gray500,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -605,20 +621,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   ),
                   child: _loading
                       ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
                       : Text(
-                    'Guardar Cambios',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                          'Guardar Cambios',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                 ),
               ),
 
@@ -628,10 +644,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               if (!_hasChanges)
                 const Text(
                   'Modifica algún campo para habilitar el botón Guardar',
-                  style: TextStyle(
-                    color: AppColors.gray500,
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: AppColors.gray500, fontSize: 12),
                   textAlign: TextAlign.center,
                 ),
 
@@ -641,7 +654,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   decoration: BoxDecoration(
                     color: AppColors.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                    border: Border.all(
+                      color: AppColors.primary.withOpacity(0.3),
+                    ),
                   ),
                   child: Row(
                     children: [

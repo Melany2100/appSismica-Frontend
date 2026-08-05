@@ -9,18 +9,25 @@ import 'package:http_parser/http_parser.dart';
 
 class DatabaseService {
   static String? _authToken;
+  static Future<void> Function()? _onUnauthorized;
 
   // Usar la URL dinámica
   static String get _baseUrl => DatabaseConfig.getServerUrl();
 
   static void setAuthToken(String? token) {
     _authToken = token;
-    print('Token establecido: ${token != null ? "${token.substring(0, 20)}..." : "null"}');
+    print(
+      'Token establecido: ${token != null ? "${token.substring(0, 20)}..." : "null"}',
+    );
   }
 
   static void clearAuthToken() {
     _authToken = null;
     print('Token limpiado');
+  }
+
+  static void setUnauthorizedHandler(Future<void> Function()? handler) {
+    _onUnauthorized = handler;
   }
 
   static Map<String, String> get _baseHeaders => {
@@ -34,14 +41,14 @@ class DatabaseService {
   };
 
   // MÉTODO PARA VERIFICAR CONEXIÓN
-  static Future<DatabaseResponse<Map<String, dynamic>>> checkConnection() async {
+  static Future<DatabaseResponse<Map<String, dynamic>>>
+  checkConnection() async {
     try {
       print('Intentando conectar a: $_baseUrl/health');
 
-      final response = await http.get(
-        Uri.parse('$_baseUrl/health'),
-        headers: _baseHeaders,
-      ).timeout(Duration(milliseconds: DatabaseConfig.connectionTimeout));
+      final response = await http
+          .get(Uri.parse('$_baseUrl/health'), headers: _baseHeaders)
+          .timeout(Duration(milliseconds: DatabaseConfig.connectionTimeout));
 
       print('Respuesta del servidor: ${response.statusCode}');
       print('Contenido: ${response.body}');
@@ -56,14 +63,20 @@ class DatabaseService {
           'timestamp': DateTime.now().toIso8601String(),
         });
       } else {
-        return DatabaseResponse.error('Servidor respondió con código ${response.statusCode}');
+        return DatabaseResponse.error(
+          'Servidor respondió con código ${response.statusCode}',
+        );
       }
     } on SocketException catch (e) {
       print('Error de red: $e');
-      return DatabaseResponse.error('Sin conexión de red. Verifica que el servidor esté corriendo.');
+      return DatabaseResponse.error(
+        'Sin conexión de red. Verifica que el servidor esté corriendo.',
+      );
     } on TimeoutException catch (e) {
       print('Timeout: $e');
-      return DatabaseResponse.error('Timeout: El servidor no responde en $_baseUrl');
+      return DatabaseResponse.error(
+        'Timeout: El servidor no responde en $_baseUrl',
+      );
     } catch (e) {
       print('Error general: $e');
       return DatabaseResponse.error('Error de conexión: $e');
@@ -72,19 +85,21 @@ class DatabaseService {
 
   // GET Request actualizado
   static Future<DatabaseResponse<T>> get<T>(
-      String endpoint, {
-        bool requiresAuth = false,
-      }) async {
+    String endpoint, {
+    bool requiresAuth = false,
+  }) async {
     try {
       print('GET Request:');
       print('  URL: $_baseUrl$endpoint');
       print('  Auth required: $requiresAuth');
       print('  Has token: ${_authToken != null}');
 
-      final response = await http.get(
-        Uri.parse('$_baseUrl$endpoint'),
-        headers: requiresAuth ? _authHeaders : _baseHeaders,
-      ).timeout(Duration(milliseconds: DatabaseConfig.connectionTimeout));
+      final response = await http
+          .get(
+            Uri.parse('$_baseUrl$endpoint'),
+            headers: requiresAuth ? _authHeaders : _baseHeaders,
+          )
+          .timeout(Duration(milliseconds: DatabaseConfig.connectionTimeout));
 
       return _handleResponse<T>(response, 'GET', endpoint);
     } catch (e) {
@@ -94,19 +109,21 @@ class DatabaseService {
   }
 
   static Future<DatabaseResponse<T>> delete<T>(
-      String endpoint, {
-        bool requiresAuth = false,
-      }) async {
+    String endpoint, {
+    bool requiresAuth = false,
+  }) async {
     try {
       print('DELETE Request:');
       print('  URL: $_baseUrl$endpoint');
       print('  Auth required: $requiresAuth');
       print('  Has token: ${_authToken != null}');
 
-      final response = await http.delete(
-        Uri.parse('$_baseUrl$endpoint'),
-        headers: requiresAuth ? _authHeaders : _baseHeaders,
-      ).timeout(Duration(milliseconds: DatabaseConfig.connectionTimeout));
+      final response = await http
+          .delete(
+            Uri.parse('$_baseUrl$endpoint'),
+            headers: requiresAuth ? _authHeaders : _baseHeaders,
+          )
+          .timeout(Duration(milliseconds: DatabaseConfig.connectionTimeout));
 
       // CORRECCIÓN: Usar la misma firma que los otros métodos
       return _handleResponse<T>(response, 'DELETE', endpoint);
@@ -118,10 +135,10 @@ class DatabaseService {
 
   // POST Request actualizado
   static Future<DatabaseResponse<T>> post<T>(
-      String endpoint,
-      Map<String, dynamic> data, {
-        bool requiresAuth = false,
-      }) async {
+    String endpoint,
+    Map<String, dynamic> data, {
+    bool requiresAuth = false,
+  }) async {
     try {
       print('POST Request:');
       print('  URL: $_baseUrl$endpoint');
@@ -129,11 +146,13 @@ class DatabaseService {
       print('  Has token: ${_authToken != null}');
       print('  Data keys: ${data.keys.toList()}');
 
-      final response = await http.post(
-        Uri.parse('$_baseUrl$endpoint'),
-        headers: requiresAuth ? _authHeaders : _baseHeaders,
-        body: json.encode(data),
-      ).timeout(Duration(milliseconds: DatabaseConfig.connectionTimeout));
+      final response = await http
+          .post(
+            Uri.parse('$_baseUrl$endpoint'),
+            headers: requiresAuth ? _authHeaders : _baseHeaders,
+            body: json.encode(data),
+          )
+          .timeout(Duration(milliseconds: DatabaseConfig.connectionTimeout));
 
       return _handleResponse<T>(response, 'POST', endpoint);
     } catch (e) {
@@ -144,14 +163,17 @@ class DatabaseService {
 
   // POST con archivo actualizado
   static Future<DatabaseResponse<T>> postWithFile<T>(
-      String endpoint,
-      Map<String, String> fields,
-      File? file,
-      String fileFieldName, {
-        bool requiresAuth = false,
-      }) async {
+    String endpoint,
+    Map<String, String> fields,
+    File? file,
+    String fileFieldName, {
+    bool requiresAuth = false,
+  }) async {
     try {
-      var request = http.MultipartRequest('POST', Uri.parse('$_baseUrl$endpoint'));
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$_baseUrl$endpoint'),
+      );
 
       if (requiresAuth && _authToken != null) {
         request.headers['Authorization'] = 'Bearer $_authToken';
@@ -160,10 +182,9 @@ class DatabaseService {
       request.fields.addAll(fields);
 
       if (file != null) {
-        request.files.add(await http.MultipartFile.fromPath(
-          fileFieldName,
-          file.path,
-        ));
+        request.files.add(
+          await http.MultipartFile.fromPath(fileFieldName, file.path),
+        );
       }
 
       print('Multipart POST Request:');
@@ -171,8 +192,9 @@ class DatabaseService {
       print('  Fields: ${request.fields.keys.toList()}');
       print('  Files: ${request.files.length}');
 
-      final streamedResponse = await request.send()
-          .timeout(Duration(milliseconds: DatabaseConfig.connectionTimeout));
+      final streamedResponse = await request.send().timeout(
+        Duration(milliseconds: DatabaseConfig.connectionTimeout),
+      );
       final response = await http.Response.fromStream(streamedResponse);
 
       return _handleResponse<T>(response, 'POST (Multipart)', endpoint);
@@ -183,10 +205,11 @@ class DatabaseService {
   }
 
   static Future<DatabaseResponse<T>> postMultipart<T>(
-      String endpoint,
-      Map<String, String> fields, // Solo strings para multipart
-          {File? file, String? fileFieldName}
-      ) async {
+    String endpoint,
+    Map<String, String> fields, { // Solo strings para multipart
+    File? file,
+    String? fileFieldName,
+  }) async {
     try {
       final uri = Uri.parse('$_baseUrl$endpoint');
       final request = http.MultipartRequest('POST', uri);
@@ -201,10 +224,9 @@ class DatabaseService {
 
       // Agregar archivo si existe
       if (file != null && fileFieldName != null) {
-        request.files.add(await http.MultipartFile.fromPath(
-          fileFieldName,
-          file.path,
-        ));
+        request.files.add(
+          await http.MultipartFile.fromPath(fileFieldName, file.path),
+        );
       }
 
       print('Multipart Request:');
@@ -224,8 +246,19 @@ class DatabaseService {
   }
 
   // Manejo centralizado de respuestas MEJORADO
-  static DatabaseResponse<T> _handleResponse<T>(http.Response response, String method, String endpoint) {
+  static DatabaseResponse<T> _handleResponse<T>(
+    http.Response response,
+    String method,
+    String endpoint,
+  ) {
     final statusCode = response.statusCode;
+
+    if (statusCode == 401 && _authToken != null && endpoint != '/auth/login') {
+      final handler = _onUnauthorized;
+      if (handler != null) {
+        unawaited(handler());
+      }
+    }
 
     // LOGS MÁS INFORMATIVOS
     print('HTTP Response ($method $endpoint):');
@@ -245,7 +278,10 @@ class DatabaseService {
         return DatabaseResponse.success(data, statusCode: statusCode);
       } catch (e) {
         print('  Respuesta no es JSON, retornando como String: $e');
-        return DatabaseResponse.success(response.body as T, statusCode: statusCode);
+        return DatabaseResponse.success(
+          response.body as T,
+          statusCode: statusCode,
+        );
       }
     } else {
       try {
@@ -255,7 +291,8 @@ class DatabaseService {
         // EXTRACCIÓN MEJORADA DE ERRORES
         if (errorData is Map<String, dynamic>) {
           if (errorData['error'] != null) {
-            if (errorData['error'] is Map && errorData['error']['message'] != null) {
+            if (errorData['error'] is Map &&
+                errorData['error']['message'] != null) {
               errorMessage = errorData['error']['message'];
             } else if (errorData['error'] is String) {
               errorMessage = errorData['error'];
@@ -269,28 +306,33 @@ class DatabaseService {
         return DatabaseResponse.error(errorMessage, statusCode);
       } catch (e) {
         print('  Error sin estructura JSON: ${response.body}');
-        return DatabaseResponse.error('Error HTTP $statusCode: ${response.body}', statusCode);
+        return DatabaseResponse.error(
+          'Error HTTP $statusCode: ${response.body}',
+          statusCode,
+        );
       }
     }
   }
 
   // PUT Request
   static Future<DatabaseResponse<T>> put<T>(
-      String endpoint,
-      Map<String, dynamic> data, {
-        bool requiresAuth = false,
-      }) async {
+    String endpoint,
+    Map<String, dynamic> data, {
+    bool requiresAuth = false,
+  }) async {
     try {
       print('PUT Request:');
       print('  URL: $_baseUrl$endpoint');
       print('  Auth required: $requiresAuth');
       print('  Data keys: ${data.keys.toList()}');
 
-      final response = await http.put(
-        Uri.parse('$_baseUrl$endpoint'),
-        headers: requiresAuth ? _authHeaders : _baseHeaders,
-        body: json.encode(data),
-      ).timeout(Duration(milliseconds: DatabaseConfig.connectionTimeout));
+      final response = await http
+          .put(
+            Uri.parse('$_baseUrl$endpoint'),
+            headers: requiresAuth ? _authHeaders : _baseHeaders,
+            body: json.encode(data),
+          )
+          .timeout(Duration(milliseconds: DatabaseConfig.connectionTimeout));
 
       return _handleResponse<T>(response, 'PUT', endpoint);
     } catch (e) {
@@ -301,21 +343,23 @@ class DatabaseService {
 
   // PATCH Request
   static Future<DatabaseResponse<T>> patch<T>(
-      String endpoint,
-      Map<String, dynamic> data, {
-        bool requiresAuth = false,
-      }) async {
+    String endpoint,
+    Map<String, dynamic> data, {
+    bool requiresAuth = false,
+  }) async {
     try {
       print('PATCH Request:');
       print('  URL: $_baseUrl$endpoint');
       print('  Auth required: $requiresAuth');
       print('  Data keys: ${data.keys.toList()}');
 
-      final response = await http.patch(
-        Uri.parse('$_baseUrl$endpoint'),
-        headers: requiresAuth ? _authHeaders : _baseHeaders,
-        body: json.encode(data),
-      ).timeout(Duration(milliseconds: DatabaseConfig.connectionTimeout));
+      final response = await http
+          .patch(
+            Uri.parse('$_baseUrl$endpoint'),
+            headers: requiresAuth ? _authHeaders : _baseHeaders,
+            body: json.encode(data),
+          )
+          .timeout(Duration(milliseconds: DatabaseConfig.connectionTimeout));
 
       return _handleResponse<T>(response, 'PATCH', endpoint);
     } catch (e) {
@@ -326,14 +370,17 @@ class DatabaseService {
 
   // PUT con archivo
   static Future<DatabaseResponse<T>> putWithFile<T>(
-      String endpoint,
-      Map<String, String> fields,
-      File? file,
-      String fileFieldName, {
-        bool requiresAuth = false,
-      }) async {
+    String endpoint,
+    Map<String, String> fields,
+    File? file,
+    String fileFieldName, {
+    bool requiresAuth = false,
+  }) async {
     try {
-      var request = http.MultipartRequest('PUT', Uri.parse('$_baseUrl$endpoint'));
+      var request = http.MultipartRequest(
+        'PUT',
+        Uri.parse('$_baseUrl$endpoint'),
+      );
 
       if (requiresAuth && _authToken != null) {
         request.headers['Authorization'] = 'Bearer $_authToken';
@@ -342,10 +389,9 @@ class DatabaseService {
       request.fields.addAll(fields);
 
       if (file != null) {
-        request.files.add(await http.MultipartFile.fromPath(
-          fileFieldName,
-          file.path,
-        ));
+        request.files.add(
+          await http.MultipartFile.fromPath(fileFieldName, file.path),
+        );
       }
 
       print('Multipart PUT Request:');
@@ -353,8 +399,9 @@ class DatabaseService {
       print('  Fields: ${request.fields.keys.toList()}');
       print('  Files: ${request.files.length}');
 
-      final streamedResponse = await request.send()
-          .timeout(Duration(milliseconds: DatabaseConfig.connectionTimeout));
+      final streamedResponse = await request.send().timeout(
+        Duration(milliseconds: DatabaseConfig.connectionTimeout),
+      );
       final response = await http.Response.fromStream(streamedResponse);
 
       return _handleResponse<T>(response, 'PUT (Multipart)', endpoint);
@@ -367,10 +414,9 @@ class DatabaseService {
   // MÉTODO DE UTILIDAD PARA VERIFICAR DISPONIBILIDAD DE ENDPOINTS
   static Future<bool> isEndpointAvailable(String endpoint) async {
     try {
-      final response = await http.head(
-        Uri.parse('$_baseUrl$endpoint'),
-        headers: _authHeaders,
-      ).timeout(Duration(seconds: 5));
+      final response = await http
+          .head(Uri.parse('$_baseUrl$endpoint'), headers: _authHeaders)
+          .timeout(Duration(seconds: 5));
 
       // 200-299 = disponible, 404 = no disponible, otros = error pero disponible
       return response.statusCode != 404;
@@ -400,7 +446,10 @@ class DatabaseService {
     return request;
   }
 
-  static Future<http.MultipartFile> createMultipartFile(File file, String fieldName) async {
+  static Future<http.MultipartFile> createMultipartFile(
+    File file,
+    String fieldName,
+  ) async {
     // Detectar el tipo MIME
     String mimeType;
     final extension = file.path.toLowerCase();
@@ -435,10 +484,16 @@ class DatabaseService {
     );
   }
 
-  static Future<DatabaseResponse<Map<String, dynamic>>> sendMultipartRequest(http.MultipartRequest request) async {
+  static Future<DatabaseResponse<Map<String, dynamic>>> sendMultipartRequest(
+    http.MultipartRequest request,
+  ) async {
     final streamedResponse = await request.send();
     final response = await http.Response.fromStream(streamedResponse);
-    return _handleResponse<Map<String, dynamic>>(response, request.method, request.url.path);
+    return _handleResponse<Map<String, dynamic>>(
+      response,
+      request.method,
+      request.url.path,
+    );
   }
 
   // MÉTODO DE DEBUG PARA VERIFICAR CONFIGURACIÓN
@@ -446,7 +501,9 @@ class DatabaseService {
     return {
       'baseUrl': _baseUrl,
       'hasToken': hasAuthToken(),
-      'tokenPreview': _authToken != null ? '${_authToken!.substring(0, 20)}...' : null,
+      'tokenPreview': _authToken != null
+          ? '${_authToken!.substring(0, 20)}...'
+          : null,
       'connectionTimeout': DatabaseConfig.connectionTimeout,
       'timestamp': DateTime.now().toIso8601String(),
     };

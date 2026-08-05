@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/services/user_service.dart';
 import '../../data/models/user_response.dart';
 import 'edit_profile_screen.dart';
+import '../../core/services/auth_service.dart';
 
 class ProfileAdminScreen extends StatefulWidget {
   final String? userId;
@@ -86,6 +87,9 @@ class _ProfileAdminScreenState extends State<ProfileAdminScreen> {
     await prefs.remove('accessToken');
     await prefs.remove('userId');
     await prefs.remove('userName');
+    await prefs.remove('userRole');
+
+    AuthService.logout();
 
     if (mounted) {
       Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
@@ -104,7 +108,9 @@ class _ProfileAdminScreenState extends State<ProfileAdminScreen> {
 
     if (userId == null || token == null || _userData == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error: No se puede acceder a editar perfil')),
+        const SnackBar(
+          content: Text('Error: No se puede acceder a editar perfil'),
+        ),
       );
       return;
     }
@@ -177,11 +183,7 @@ class _ProfileAdminScreenState extends State<ProfileAdminScreen> {
     return CircleAvatar(
       radius: 50,
       backgroundColor: AppColors.primary.withOpacity(0.1),
-      child: Icon(
-        Icons.person,
-        size: 50,
-        color: AppColors.primary,
-      ),
+      child: Icon(Icons.person, size: 50, color: AppColors.primary),
     );
   }
 
@@ -218,21 +220,14 @@ class _ProfileAdminScreenState extends State<ProfileAdminScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
-                Icons.error_outline,
-                size: 64,
-                color: AppColors.error,
-              ),
+              const Icon(Icons.error_outline, size: 64, color: AppColors.error),
               const SizedBox(height: 16),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 32),
                 child: Text(
                   _errorMessage!,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: AppColors.text,
-                    fontSize: 16,
-                  ),
+                  style: const TextStyle(color: AppColors.text, fontSize: 16),
                 ),
               ),
               const SizedBox(height: 24),
@@ -308,21 +303,23 @@ class _ProfileAdminScreenState extends State<ProfileAdminScreen> {
               const SizedBox(height: 8),
               Text(
                 _userData!.email,
-                style: const TextStyle(
-                  color: AppColors.gray500,
-                  fontSize: 16,
-                ),
+                style: const TextStyle(color: AppColors.gray500, fontSize: 16),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
 
               // Badge del rol
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: _getRoleColor(_userData!.rol).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: _getRoleColor(_userData!.rol).withOpacity(0.3)),
+                  border: Border.all(
+                    color: _getRoleColor(_userData!.rol).withOpacity(0.3),
+                  ),
                 ),
                 child: Text(
                   _getRoleDisplayName(_userData!.rol),
@@ -338,7 +335,8 @@ class _ProfileAdminScreenState extends State<ProfileAdminScreen> {
 
               // Información adicional en cards
               if (_userData!.cedula != null && _userData!.cedula!.isNotEmpty ||
-                  _userData!.telefono != null && _userData!.telefono!.isNotEmpty)
+                  _userData!.telefono != null &&
+                      _userData!.telefono!.isNotEmpty)
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
@@ -359,10 +357,15 @@ class _ProfileAdminScreenState extends State<ProfileAdminScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      if (_userData!.cedula != null && _userData!.cedula!.isNotEmpty) ...[
+                      if (_userData!.cedula != null &&
+                          _userData!.cedula!.isNotEmpty) ...[
                         Row(
                           children: [
-                            const Icon(Icons.badge, size: 20, color: AppColors.gray500),
+                            const Icon(
+                              Icons.badge,
+                              size: 20,
+                              color: AppColors.gray500,
+                            ),
                             const SizedBox(width: 8),
                             Text(
                               "Cédula: ${_userData!.cedula}",
@@ -372,10 +375,15 @@ class _ProfileAdminScreenState extends State<ProfileAdminScreen> {
                         ),
                         const SizedBox(height: 8),
                       ],
-                      if (_userData!.telefono != null && _userData!.telefono!.isNotEmpty) ...[
+                      if (_userData!.telefono != null &&
+                          _userData!.telefono!.isNotEmpty) ...[
                         Row(
                           children: [
-                            const Icon(Icons.phone, size: 20, color: AppColors.gray500),
+                            const Icon(
+                              Icons.phone,
+                              size: 20,
+                              color: AppColors.gray500,
+                            ),
                             const SizedBox(width: 8),
                             Text(
                               "Teléfono: ${_userData!.telefono}",
@@ -398,7 +406,10 @@ class _ProfileAdminScreenState extends State<ProfileAdminScreen> {
                     onPressed: () {
                       Navigator.pushNamed(context, '/userList');
                     },
-                    icon: const Icon(Icons.admin_panel_settings, color: Colors.white),
+                    icon: const Icon(
+                      Icons.admin_panel_settings,
+                      color: Colors.white,
+                    ),
                     label: const Text("Asignar roles"),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,

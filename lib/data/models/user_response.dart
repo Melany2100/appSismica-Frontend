@@ -29,20 +29,15 @@ class UserResponse {
     };
   }
 
-  factory UserResponse.success(UserData data, {String message = 'Operación exitosa'}) {
-    return UserResponse(
-      success: true,
-      message: message,
-      data: data,
-    );
+  factory UserResponse.success(
+    UserData data, {
+    String message = 'Operación exitosa',
+  }) {
+    return UserResponse(success: true, message: message, data: data);
   }
 
   factory UserResponse.error(String error) {
-    return UserResponse(
-      success: false,
-      message: 'Error',
-      error: error,
-    );
+    return UserResponse(success: false, message: 'Error', error: error);
   }
 }
 
@@ -65,7 +60,9 @@ class UsersListResponse {
     if (json['data'] != null) {
       if (json['data'] is List) {
         usersList = (json['data'] as List)
-            .map((userData) => UserData.fromJson(userData as Map<String, dynamic>))
+            .map(
+              (userData) => UserData.fromJson(userData as Map<String, dynamic>),
+            )
             .toList();
       }
     }
@@ -87,20 +84,15 @@ class UsersListResponse {
     };
   }
 
-  factory UsersListResponse.success(List<UserData> data, {String message = 'Lista obtenida correctamente'}) {
-    return UsersListResponse(
-      success: true,
-      message: message,
-      data: data,
-    );
+  factory UsersListResponse.success(
+    List<UserData> data, {
+    String message = 'Lista obtenida correctamente',
+  }) {
+    return UsersListResponse(success: true, message: message, data: data);
   }
 
   factory UsersListResponse.error(String error) {
-    return UsersListResponse(
-      success: false,
-      message: 'Error',
-      error: error,
-    );
+    return UsersListResponse(success: false, message: 'Error', error: error);
   }
 }
 
@@ -114,6 +106,7 @@ class UserData {
   final String rol;
   final String? direccion;
   final String? fotoPerfilUrl;
+  final bool activo;
 
   UserData({
     required this.idUsuario,
@@ -124,28 +117,39 @@ class UserData {
     required this.rol,
     this.direccion,
     this.fotoPerfilUrl,
+    this.activo = true,
   });
 
   factory UserData.fromJson(Map<String, dynamic> json) {
     // Manejar diferentes formatos de ID
     int? userId;
     if (json['id_usuario'] != null) {
-      userId = json['id_usuario'] is int ? json['id_usuario'] : int.tryParse(json['id_usuario'].toString());
+      userId = json['id_usuario'] is int
+          ? json['id_usuario']
+          : int.tryParse(json['id_usuario'].toString());
     } else if (json['id'] != null) {
-      userId = json['id'] is int ? json['id'] : int.tryParse(json['id'].toString());
+      userId = json['id'] is int
+          ? json['id']
+          : int.tryParse(json['id'].toString());
     } else if (json['userId'] != null) {
-      userId = json['userId'] is int ? json['userId'] : int.tryParse(json['userId'].toString());
+      userId = json['userId'] is int
+          ? json['userId']
+          : int.tryParse(json['userId'].toString());
     }
 
     // MEJORADO: Manejo de URL de foto más robusto
     String? fotoUrl;
-    if (json['foto_perfil_url'] != null && json['foto_perfil_url'].toString().trim().isNotEmpty) {
+    if (json['foto_perfil_url'] != null &&
+        json['foto_perfil_url'].toString().trim().isNotEmpty) {
       fotoUrl = json['foto_perfil_url'].toString().trim();
-    } else if (json['foto_url'] != null && json['foto_url'].toString().trim().isNotEmpty) {
+    } else if (json['foto_url'] != null &&
+        json['foto_url'].toString().trim().isNotEmpty) {
       fotoUrl = json['foto_url'].toString().trim();
-    } else if (json['foto'] != null && json['foto'].toString().trim().isNotEmpty) {
+    } else if (json['foto'] != null &&
+        json['foto'].toString().trim().isNotEmpty) {
       fotoUrl = json['foto'].toString().trim();
-    } else if (json['profileImage'] != null && json['profileImage'].toString().trim().isNotEmpty) {
+    } else if (json['profileImage'] != null &&
+        json['profileImage'].toString().trim().isNotEmpty) {
       fotoUrl = json['profileImage'].toString().trim();
     }
 
@@ -164,6 +168,9 @@ class UserData {
       rol: json['rol']?.toString() ?? json['role']?.toString() ?? '',
       direccion: json['direccion']?.toString() ?? json['address']?.toString(),
       fotoPerfilUrl: fotoUrl,
+      // Los endpoints /users y /users/inactive no incluyen este campo.
+      // En esos casos el llamador puede sobrescribir el valor conocido.
+      activo: json['activo'] is bool ? json['activo'] as bool : true,
     );
   }
 
@@ -177,6 +184,7 @@ class UserData {
       'rol': rol,
       'direccion': direccion,
       'foto_perfil_url': fotoPerfilUrl,
+      'activo': activo,
     };
   }
 
@@ -241,9 +249,10 @@ class UserData {
       'address': direccion,
       'foto_perfil_url': fotoPerfilUrl,
       'foto_url': fotoPerfilUrl, // Alias para compatibilidad
-      'foto': fotoPerfilUrl,     // Otro alias
+      'foto': fotoPerfilUrl, // Otro alias
       'profileImage': fotoPerfilUrl, // Otro alias
       'hasProfileImage': hasProfileImage, // Helper
+      'activo': activo,
     };
   }
 
@@ -286,6 +295,7 @@ class UserData {
     String? rol,
     String? direccion,
     String? fotoPerfilUrl,
+    bool? activo,
   }) {
     return UserData(
       idUsuario: idUsuario ?? this.idUsuario,
@@ -296,12 +306,13 @@ class UserData {
       rol: rol ?? this.rol,
       direccion: direccion ?? this.direccion,
       fotoPerfilUrl: fotoPerfilUrl ?? this.fotoPerfilUrl,
+      activo: activo ?? this.activo,
     );
   }
 
   @override
   String toString() {
-    return 'UserData{idUsuario: $idUsuario, nombre: $nombre, email: $email, rol: $rol, hasImage: $hasProfileImage}';
+    return 'UserData{idUsuario: $idUsuario, nombre: $nombre, email: $email, rol: $rol, activo: $activo, hasImage: $hasProfileImage}';
   }
 
   @override
@@ -393,5 +404,4 @@ class RoleAssignmentResponse {
       error: error,
     );
   }
-
 }

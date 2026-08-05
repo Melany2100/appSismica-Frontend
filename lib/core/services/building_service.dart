@@ -77,7 +77,9 @@ class BuildingService {
       attemptCount++;
 
       try {
-        print('BuildingService: Intento $attemptCount/$maxRetries para crear edificio');
+        print(
+          'BuildingService: Intento $attemptCount/$maxRetries para crear edificio',
+        );
 
         // ===== PREPARAR CAMPOS CON COMPATIBILIDAD DEL SERVIDOR =====
         final Map<String, String> fields = {
@@ -108,7 +110,8 @@ class BuildingService {
         if (anioAmpliacion != null) {
           fields['anio_ampliacion'] = anioAmpliacion.toString();
         }
-        if (otrasIdentificaciones != null && otrasIdentificaciones.trim().isNotEmpty) {
+        if (otrasIdentificaciones != null &&
+            otrasIdentificaciones.trim().isNotEmpty) {
           fields['otras_identificaciones'] = otrasIdentificaciones.trim();
         }
         if (comentarios != null && comentarios.trim().isNotEmpty) {
@@ -117,16 +120,24 @@ class BuildingService {
 
         // Log para verificar compatibilidad con servidor (remover en producción)
         print('Campos enviados - verificación de booleanos:');
-        print('  - ampliacion: ${fields['ampliacion']} (bool original: $ampliacion)');
-        print('  - historico: ${fields['historico']} (bool original: $historico)');
+        print(
+          '  - ampliacion: ${fields['ampliacion']} (bool original: $ampliacion)',
+        );
+        print(
+          '  - historico: ${fields['historico']} (bool original: $historico)',
+        );
         print('  - albergue: ${fields['albergue']} (bool original: $albergue)');
-        print('  - gubernamental: ${fields['gubernamental']} (bool original: $gubernamental)');
+        print(
+          '  - gubernamental: ${fields['gubernamental']} (bool original: $gubernamental)',
+        );
         print('Total campos: ${fields.length}');
 
         // Crear request multipart
         final request = DatabaseService.buildMultipartRequest(
           'POST',
-          Uri.parse('${DatabaseConfig.getServerUrl()}${DatabaseEndpoints.buildings}'),
+          Uri.parse(
+            '${DatabaseConfig.getServerUrl()}${DatabaseEndpoints.buildings}',
+          ),
         );
 
         // Agregar campos
@@ -137,12 +148,16 @@ class BuildingService {
           // Verificar que el archivo existe y es accesible
           if (!await fotoEdificio.exists()) {
             return BuildingResponse.failure(
-                error: 'El archivo de foto del edificio no existe o no es accesible'
+              error:
+                  'El archivo de foto del edificio no existe o no es accesible',
             );
           }
 
           request.files.add(
-            await DatabaseService.createMultipartFile(fotoEdificio, 'foto_edificio'),
+            await DatabaseService.createMultipartFile(
+              fotoEdificio,
+              'foto_edificio',
+            ),
           );
           print('Archivo foto_edificio agregado: ${fotoEdificio.path}');
           print('Tamaño del archivo: ${await fotoEdificio.length()} bytes');
@@ -152,12 +167,16 @@ class BuildingService {
           // Verificar que el archivo existe y es accesible
           if (!await graficoEdificio.exists()) {
             return BuildingResponse.failure(
-                error: 'El archivo de gráfico del edificio no existe o no es accesible'
+              error:
+                  'El archivo de gráfico del edificio no existe o no es accesible',
             );
           }
 
           request.files.add(
-            await DatabaseService.createMultipartFile(graficoEdificio, 'grafico_edificio'),
+            await DatabaseService.createMultipartFile(
+              graficoEdificio,
+              'grafico_edificio',
+            ),
           );
           print('Archivo grafico_edificio agregado: ${graficoEdificio.path}');
           print('Tamaño del archivo: ${await graficoEdificio.length()} bytes');
@@ -201,7 +220,6 @@ class BuildingService {
           if (response.statusCode != null &&
               response.statusCode! >= 400 &&
               response.statusCode! < 500) {
-
             print('Error del cliente (${response.statusCode})');
             print('Datos de respuesta: ${response.data}');
             print('Error original: ${response.error}');
@@ -217,15 +235,20 @@ class BuildingService {
                   // Buscar mensaje en diferentes estructuras posibles
                   if (data['error'] != null) {
                     final errorObj = data['error'];
-                    if (errorObj is Map<String, dynamic> && errorObj['message'] != null) {
-                      errorMessage = errorObj['message']?.toString() ?? 'Error desconocido';
+                    if (errorObj is Map<String, dynamic> &&
+                        errorObj['message'] != null) {
+                      errorMessage =
+                          errorObj['message']?.toString() ??
+                          'Error desconocido';
                     } else if (errorObj is String) {
                       errorMessage = errorObj;
                     }
                   } else if (data['message'] != null) {
-                    errorMessage = data['message']?.toString() ?? 'Error desconocido';
+                    errorMessage =
+                        data['message']?.toString() ?? 'Error desconocido';
                   } else if (data['detail'] != null) {
-                    errorMessage = data['detail']?.toString() ?? 'Error desconocido';
+                    errorMessage =
+                        data['detail']?.toString() ?? 'Error desconocido';
                   }
                 } else if (data is String) {
                   final trimmedData = data!.trim();
@@ -235,12 +258,14 @@ class BuildingService {
                 }
               }
 
-              if (errorMessage == 'Error desconocido' && response.error != null) {
+              if (errorMessage == 'Error desconocido' &&
+                  response.error != null) {
                 errorMessage = response.error!;
               }
             } catch (e) {
               print('Error parseando mensaje: $e');
-              errorMessage = response.error ?? 'Error de formato en la respuesta';
+              errorMessage =
+                  response.error ?? 'Error de formato en la respuesta';
             }
 
             print('Mensaje de error extraído: $errorMessage');
@@ -251,7 +276,8 @@ class BuildingService {
                 if (errorMessage.isEmpty ||
                     errorMessage.contains('HTTP 400') ||
                     errorMessage == 'Error desconocido') {
-                  errorMessage = 'Datos del edificio incorrectos o incompletos. Revise:\n'
+                  errorMessage =
+                      'Datos del edificio incorrectos o incompletos. Revise:\n'
                       '• Nombre del edificio (mínimo 3 caracteres)\n'
                       '• Todos los campos requeridos\n'
                       '• Formato de archivos (JPG/PNG)\n'
@@ -262,21 +288,25 @@ class BuildingService {
                 errorMessage = 'No autorizado. Inicie sesión nuevamente.';
                 break;
               case 413:
-                errorMessage = 'Los archivos son demasiado grandes (máximo 10MB cada uno)';
+                errorMessage =
+                    'Los archivos son demasiado grandes (máximo 10MB cada uno)';
                 break;
               case 415:
-                errorMessage = 'Formato de archivo no válido. Use solo JPG o PNG.';
+                errorMessage =
+                    'Formato de archivo no válido. Use solo JPG o PNG.';
                 break;
               case 422:
                 if (errorMessage.isEmpty || errorMessage.contains('HTTP 422')) {
-                  errorMessage = 'Error de validación en los datos:\n'
+                  errorMessage =
+                      'Error de validación en los datos:\n'
                       '• Verifique formatos de fecha y números\n'
                       '• Campos requeridos completos\n'
                       '• Rangos de valores válidos';
                 }
                 break;
               case 500:
-                errorMessage = 'Error interno del servidor. Intente nuevamente.';
+                errorMessage =
+                    'Error interno del servidor. Intente nuevamente.';
                 break;
             }
 
@@ -290,7 +320,8 @@ class BuildingService {
           print('Intento $attemptCount falló: ${response.error}');
           if (attemptCount >= maxRetries) {
             return BuildingResponse.failure(
-              error: response.error ??
+              error:
+                  response.error ??
                   'Error de conexión después de $maxRetries intentos',
               statusCode: response.statusCode,
             );
@@ -315,7 +346,9 @@ class BuildingService {
     }
 
     // Fallback (no debería llegar aquí)
-    return BuildingResponse.failure(error: 'Error inesperado al crear edificio');
+    return BuildingResponse.failure(
+      error: 'Error inesperado al crear edificio',
+    );
   }
 
   // ===== VALIDACIÓN DE ARCHIVOS =====
@@ -359,8 +392,10 @@ class BuildingService {
     required int unidades,
   }) {
     // ===== VALIDACIONES DE STRINGS =====
-    if (nombreEdificio.trim().isEmpty) return 'El nombre del edificio es requerido';
-    if (nombreEdificio.trim().length < 3) return 'El nombre del edificio debe tener al menos 3 caracteres';
+    if (nombreEdificio.trim().isEmpty)
+      return 'El nombre del edificio es requerido';
+    if (nombreEdificio.trim().length < 3)
+      return 'El nombre del edificio debe tener al menos 3 caracteres';
     if (direccion.trim().isEmpty) return 'La dirección es requerida';
     if (ciudad.trim().isEmpty) return 'La ciudad es requerida';
     if (codigoPostal.trim().isEmpty) return 'El código postal es requerido';
@@ -368,18 +403,23 @@ class BuildingService {
     if (ocupacion.trim().isEmpty) return 'La ocupación es requerida';
 
     // ===== VALIDACIONES GEOGRÁFICAS =====
-    if (latitud < -90 || latitud > 90) return 'Latitud inválida (debe estar entre -90 y 90)';
-    if (longitud < -180 || longitud > 180) return 'Longitud inválida (debe estar entre -180 y 180)';
+    if (latitud < -90 || latitud > 90)
+      return 'Latitud inválida (debe estar entre -90 y 90)';
+    if (longitud < -180 || longitud > 180)
+      return 'Longitud inválida (debe estar entre -180 y 180)';
 
     // ===== VALIDACIONES NUMÉRICAS =====
     if (numeroPisos <= 0) return 'El número de pisos debe ser mayor a 0';
-    if (numeroPisos > 200) return 'El número de pisos parece excesivo (máximo 200)';
+    if (numeroPisos > 200)
+      return 'El número de pisos parece excesivo (máximo 200)';
 
     if (areaTotalPiso <= 0) return 'El área total por piso debe ser mayor a 0';
-    if (areaTotalPiso > 100000) return 'El área por piso parece excesiva (máximo 100,000 m²)';
+    if (areaTotalPiso > 100000)
+      return 'El área por piso parece excesiva (máximo 100,000 m²)';
 
     if (unidades <= 0) return 'El número de unidades debe ser mayor a 0';
-    if (unidades > 10000) return 'El número de unidades parece excesivo (máximo 10,000)';
+    if (unidades > 10000)
+      return 'El número de unidades parece excesivo (máximo 10,000)';
 
     // ===== VALIDACIONES DE FECHAS =====
     final currentYear = DateTime.now().year;

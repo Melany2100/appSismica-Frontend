@@ -44,7 +44,8 @@ class _AssignRoleScreenState extends State<AssignRoleScreen> {
     if (_selectedRole == null) return;
 
     // Verificar si hay cambios
-    if (_currentRole != null && _currentRole!.toLowerCase() == _selectedRole!.toLowerCase()) {
+    if (_currentRole != null &&
+        _currentRole!.toLowerCase() == _selectedRole!.toLowerCase()) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('No hay cambios que guardar'),
@@ -65,13 +66,26 @@ class _AssignRoleScreenState extends State<AssignRoleScreen> {
         return;
       }
 
-      final userId = widget.user['id']?.toString();
-      if (userId == null) {
+      final rawUserId =
+          widget.user['id'] ??
+          widget.user['id_usuario'] ??
+          widget.user['userId'];
+
+      if (rawUserId == null) {
         _showErrorMessage('ID de usuario no válido');
         return;
       }
 
-      debugPrint('🎯 Cambiando rol de $_currentRole a $_selectedRole para usuario $userId');
+      final userId = rawUserId.toString().trim();
+
+      if (userId.isEmpty) {
+        _showErrorMessage('ID de usuario no válido');
+        return;
+      }
+
+      debugPrint(
+        '🎯 Cambiando rol de $_currentRole a $_selectedRole para usuario $userId',
+      );
 
       // Usar el servicio para asignar/cambiar rol
       final response = await UserService.assignRole(
@@ -89,7 +103,9 @@ class _AssignRoleScreenState extends State<AssignRoleScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Rol ${_getRoleDisplayName(_selectedRole!)} $actionText con éxito'),
+            content: Text(
+              'Rol ${_getRoleDisplayName(_selectedRole!)} $actionText con éxito',
+            ),
             backgroundColor: Colors.green,
             duration: const Duration(seconds: 3),
           ),
@@ -158,7 +174,8 @@ class _AssignRoleScreenState extends State<AssignRoleScreen> {
     String currentRoleText;
     Color currentRoleColor;
 
-    if (_currentRole == null || _currentRole!.isEmpty ||
+    if (_currentRole == null ||
+        _currentRole!.isEmpty ||
         _currentRole!.toLowerCase() == 'null' ||
         _currentRole!.toLowerCase() == 'sin asignar') {
       currentRoleText = "Sin rol asignado";
@@ -171,7 +188,11 @@ class _AssignRoleScreenState extends State<AssignRoleScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text(_currentRole == null || _currentRole!.isEmpty ? "Asignar rol" : "Cambiar rol"),
+        title: Text(
+          _currentRole == null || _currentRole!.isEmpty
+              ? "Asignar rol"
+              : "Cambiar rol",
+        ),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
       ),
@@ -212,9 +233,14 @@ class _AssignRoleScreenState extends State<AssignRoleScreen> {
                   // Imagen de perfil
                   CircleAvatar(
                     radius: 50,
-                    backgroundImage: (foto.isNotEmpty && Uri.tryParse(foto)?.isAbsolute == true)
+                    backgroundImage:
+                        (foto.isNotEmpty &&
+                            Uri.tryParse(foto)?.isAbsolute == true)
                         ? NetworkImage(foto)
-                        : const AssetImage("assets/images/avatar_placeholder.png") as ImageProvider,
+                        : const AssetImage(
+                                "assets/images/avatar_placeholder.png",
+                              )
+                              as ImageProvider,
                   ),
                   const SizedBox(height: 16),
 
@@ -269,9 +295,14 @@ class _AssignRoleScreenState extends State<AssignRoleScreen> {
                 ),
                 isExpanded: true,
                 underline: const SizedBox(),
-                icon: const Icon(Icons.arrow_drop_down, color: AppColors.primary),
+                icon: const Icon(
+                  Icons.arrow_drop_down,
+                  color: AppColors.primary,
+                ),
                 items: _roles.map((role) {
-                  final isCurrentRole = _currentRole?.toLowerCase() == role['value']!.toLowerCase();
+                  final isCurrentRole =
+                      _currentRole?.toLowerCase() ==
+                      role['value']!.toLowerCase();
                   return DropdownMenuItem<String>(
                     value: role['value'],
                     child: Row(
@@ -289,8 +320,12 @@ class _AssignRoleScreenState extends State<AssignRoleScreen> {
                           child: Text(
                             role['label']!,
                             style: TextStyle(
-                              color: isCurrentRole ? AppColors.gray500 : AppColors.text,
-                              fontWeight: isCurrentRole ? FontWeight.normal : FontWeight.w500,
+                              color: isCurrentRole
+                                  ? AppColors.gray500
+                                  : AppColors.text,
+                              fontWeight: isCurrentRole
+                                  ? FontWeight.normal
+                                  : FontWeight.w500,
                             ),
                           ),
                         ),
@@ -320,7 +355,9 @@ class _AssignRoleScreenState extends State<AssignRoleScreen> {
                 decoration: BoxDecoration(
                   color: _getRoleColor(_selectedRole!).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: _getRoleColor(_selectedRole!).withOpacity(0.3)),
+                  border: Border.all(
+                    color: _getRoleColor(_selectedRole!).withOpacity(0.3),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -361,28 +398,34 @@ class _AssignRoleScreenState extends State<AssignRoleScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: (_selectedRole != null && _hasChanges() && !_loading) ? _saveRole : null,
+                onPressed: (_selectedRole != null && _hasChanges() && !_loading)
+                    ? _saveRole
+                    : null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: (_selectedRole != null && _hasChanges()) ? AppColors.primary : AppColors.gray300,
+                  backgroundColor: (_selectedRole != null && _hasChanges())
+                      ? AppColors.primary
+                      : AppColors.gray300,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
                 child: _loading
                     ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
                     : Text(
-                  _getButtonText(),
-                  style: TextStyle(
-                    color: (_selectedRole != null && _hasChanges()) ? Colors.white : AppColors.gray500,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                        _getButtonText(),
+                        style: TextStyle(
+                          color: (_selectedRole != null && _hasChanges())
+                              ? Colors.white
+                              : AppColors.gray500,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             ),
 
@@ -398,7 +441,11 @@ class _AssignRoleScreenState extends State<AssignRoleScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.warning_amber, color: Colors.amber, size: 20),
+                  const Icon(
+                    Icons.warning_amber,
+                    color: Colors.amber,
+                    size: 20,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -418,7 +465,12 @@ class _AssignRoleScreenState extends State<AssignRoleScreen> {
     );
   }
 
-  Widget _buildInfoRow(IconData icon, String label, String value, {Color? valueColor}) {
+  Widget _buildInfoRow(
+    IconData icon,
+    String label,
+    String value, {
+    Color? valueColor,
+  }) {
     return Row(
       children: [
         Icon(icon, size: 16, color: AppColors.gray500),
@@ -437,7 +489,9 @@ class _AssignRoleScreenState extends State<AssignRoleScreen> {
             style: TextStyle(
               fontSize: 14,
               color: valueColor ?? AppColors.text,
-              fontWeight: valueColor != null ? FontWeight.w600 : FontWeight.normal,
+              fontWeight: valueColor != null
+                  ? FontWeight.w600
+                  : FontWeight.normal,
             ),
           ),
         ),

@@ -2,13 +2,89 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart' show MediaType;
-import '../config/database_config.dart';
 import '../../data/models/database_response.dart';
 import '../../data/models/user_response.dart';
 import '../constants/database_endpoints.dart';
 import 'database_service.dart';
 
 class UserService {
+  static const Set<String> validRoles = {'admin', 'inspector', 'ayudante'};
+
+  /// Contrato actual del backend para el panel administrativo.
+  static Future<DatabaseResponse<List<UserData>>> getAll() async {
+    final response = await DatabaseService.get<dynamic>(
+      '${DatabaseEndpoints.user}/all',
+      requiresAuth: true,
+    );
+    return _mapUsersResponse(response);
+  }
+
+  static Future<DatabaseResponse<List<UserData>>> getActive() async {
+    final response = await DatabaseService.get<dynamic>(
+      DatabaseEndpoints.user,
+      requiresAuth: true,
+    );
+    return _mapUsersResponse(response, knownStatus: true);
+  }
+
+  static Future<DatabaseResponse<List<UserData>>> getInactive() async {
+    final response = await DatabaseService.get<dynamic>(
+      '${DatabaseEndpoints.user}/inactive',
+      requiresAuth: true,
+    );
+    return _mapUsersResponse(response, knownStatus: false);
+  }
+
+  static Future<DatabaseResponse<UserData>> getById(int id) async {
+    final response = await DatabaseService.get<dynamic>(
+      '${DatabaseEndpoints.user}/$id',
+      requiresAuth: true,
+    );
+    return _mapUserResponse(response);
+  }
+
+  static Future<DatabaseResponse<List<UserData>>> getByRole(String role) async {
+    final normalizedRole = role.trim().toLowerCase();
+    if (!validRoles.contains(normalizedRole)) {
+      return DatabaseResponse.error('Rol no válido');
+    }
+
+    final response = await DatabaseService.get<dynamic>(
+      '${DatabaseEndpoints.user}/byRole/$normalizedRole',
+      requiresAuth: true,
+    );
+    return _mapUsersResponse(response, knownStatus: true);
+  }
+
+  static Future<DatabaseResponse<UserData>> updateRole(
+    int id,
+    String role,
+  ) async {
+    final normalizedRole = role.trim().toLowerCase();
+    if (!validRoles.contains(normalizedRole)) {
+      return DatabaseResponse.error('Rol no válido');
+    }
+
+    final response = await DatabaseService.patch<dynamic>(
+      '${DatabaseEndpoints.user}/$id/role',
+      {'rol': normalizedRole},
+      requiresAuth: true,
+    );
+    return _mapUserResponse(response);
+  }
+
+  static Future<DatabaseResponse<UserData>> updateStatus(
+    int id,
+    bool active,
+  ) async {
+    final response = await DatabaseService.patch<dynamic>(
+      '${DatabaseEndpoints.user}/$id/status',
+      {'activo': active},
+      requiresAuth: true,
+    );
+    return _mapUserResponse(response, knownStatus: active);
+  }
+
   /// Obtener usuario por ID - para ProfileAdminScreen
   static Future<UserResponse> getUserById({
     required String token,
@@ -31,7 +107,9 @@ class UserService {
           requiresAuth: true,
         );
 
-        print('UserService.getUserById - Attempt: $attempts, Success: ${response.success}');
+        print(
+          'UserService.getUserById - Attempt: $attempts, Success: ${response.success}',
+        );
 
         if (response.success && response.data != null) {
           // Manejo seguro de tipos de respuesta
@@ -46,12 +124,16 @@ class UserService {
               }
             } else if (response.data is Map<String, dynamic>) {
               // Manejo normal para Map
-              userData = _extractUserData(response.data as Map<String, dynamic>);
+              userData = _extractUserData(
+                response.data as Map<String, dynamic>,
+              );
             }
           } catch (parseError) {
             print('Error parsing user data: $parseError');
             if (attempts >= maxRetries) {
-              return UserResponse.error('Error procesando datos del usuario: $parseError');
+              return UserResponse.error(
+                'Error procesando datos del usuario: $parseError',
+              );
             }
             if (attempts < maxRetries) {
               await Future.delayed(Duration(seconds: attempts));
@@ -71,7 +153,9 @@ class UserService {
           }
         } else {
           // Si es un error de cliente (4xx), no reintentar
-          if (response.statusCode != null && response.statusCode! >= 400 && response.statusCode! < 500) {
+          if (response.statusCode != null &&
+              response.statusCode! >= 400 &&
+              response.statusCode! < 500) {
             return UserResponse.error(_getErrorMessage(response));
           }
 
@@ -85,7 +169,6 @@ class UserService {
         if (attempts < maxRetries) {
           await Future.delayed(Duration(seconds: attempts));
         }
-
       } catch (e) {
         print('Error en getUserById attempt $attempts: $e');
         if (attempts >= maxRetries) {
@@ -182,7 +265,9 @@ class UserService {
           }
         } else {
           // Si es un error de cliente (4xx), no reintentar
-          if (response.statusCode != null && response.statusCode! >= 400 && response.statusCode! < 500) {
+          if (response.statusCode != null &&
+              response.statusCode! >= 400 &&
+              response.statusCode! < 500) {
             return UserResponse.error(_getErrorMessage(response));
           }
 
@@ -196,7 +281,6 @@ class UserService {
         if (attempts < maxRetries) {
           await Future.delayed(Duration(seconds: attempts));
         }
-
       } catch (e) {
         print('Error en updateUser attempt $attempts: $e');
         if (attempts >= maxRetries) {
@@ -211,18 +295,21 @@ class UserService {
 
   /// MÉTODO ACTUALIZADO para envío con archivo
   static Future<DatabaseResponse<Map<String, dynamic>>> _updateUserWithFile(
-      String userId,
-      Map<String, String> fields,
-      File? imageFile,
-      ) async {
+    String userId,
+    Map<String, String> fields,
+    File? imageFile,
+  ) async {
     try {
       // Crear request multipart manual para mayor control
-      final uri = Uri.parse('${DatabaseService.baseUrl}${DatabaseEndpoints.user}/$userId');
+      final uri = Uri.parse(
+        '${DatabaseService.baseUrl}${DatabaseEndpoints.user}/$userId',
+      );
       final request = http.MultipartRequest('PUT', uri);
 
       // Agregar headers de autenticación
       if (DatabaseService.hasAuthToken()) {
-        request.headers['Authorization'] = 'Bearer ${DatabaseService.getAuthToken()}';
+        request.headers['Authorization'] =
+            'Bearer ${DatabaseService.getAuthToken()}';
       }
 
       // Agregar campos
@@ -238,7 +325,9 @@ class UserService {
         // Validar tamaño (máximo 5MB)
         final fileSize = await imageFile.length();
         if (fileSize > 5 * 1024 * 1024) {
-          return DatabaseResponse.error('La imagen es demasiado grande (máximo 5MB)');
+          return DatabaseResponse.error(
+            'La imagen es demasiado grande (máximo 5MB)',
+          );
         }
 
         // Validar tipo de archivo
@@ -246,21 +335,30 @@ class UserService {
         if (!extension.endsWith('.jpg') &&
             !extension.endsWith('.jpeg') &&
             !extension.endsWith('.png')) {
-          return DatabaseResponse.error('Formato de imagen no válido. Use JPG o PNG');
+          return DatabaseResponse.error(
+            'Formato de imagen no válido. Use JPG o PNG',
+          );
         }
 
         try {
           // Crear MultipartFile con el nombre correcto que espera el servidor
-          request.files.add(await http.MultipartFile.fromPath(
-            'foto_perfil', // Nombre del campo que espera el servidor
-            imageFile.path,
-            contentType: MediaType('image', extension.endsWith('.png') ? 'png' : 'jpeg'),
-          ));
+          request.files.add(
+            await http.MultipartFile.fromPath(
+              'foto_perfil', // Nombre del campo que espera el servidor
+              imageFile.path,
+              contentType: MediaType(
+                'image',
+                extension.endsWith('.png') ? 'png' : 'jpeg',
+              ),
+            ),
+          );
 
           print('Archivo agregado: ${imageFile.path}');
           print('Tamaño: ${fileSize} bytes');
         } catch (e) {
-          return DatabaseResponse.error('Error procesando archivo de imagen: $e');
+          return DatabaseResponse.error(
+            'Error procesando archivo de imagen: $e',
+          );
         }
       }
 
@@ -292,22 +390,24 @@ class UserService {
         try {
           final errorData = json.decode(response.body);
           if (errorData is Map<String, dynamic>) {
-            errorMessage = errorData['error']?.toString() ??
+            errorMessage =
+                errorData['error']?.toString() ??
                 errorData['message']?.toString() ??
                 'Error del servidor';
           }
         } catch (e) {
-          errorMessage = response.body.isNotEmpty ? response.body : 'Error desconocido';
+          errorMessage = response.body.isNotEmpty
+              ? response.body
+              : 'Error desconocido';
         }
 
-        return DatabaseResponse.error(
-          errorMessage,
-        );
+        return DatabaseResponse.error(errorMessage);
       }
     } catch (e) {
       return DatabaseResponse.error('Error de conexión: $e');
     }
   }
+
   /// Obtener lista de usuarios sin rol - para UserListScreen
   static Future<UsersListResponse> getUsersWithoutRole({
     required String token,
@@ -329,7 +429,9 @@ class UserService {
           requiresAuth: true,
         );
 
-        print('UserService.getUsersWithoutRole - Attempt: $attempts, Success: ${response.success}');
+        print(
+          'UserService.getUsersWithoutRole - Attempt: $attempts, Success: ${response.success}',
+        );
 
         if (response.success && response.data != null) {
           List<dynamic> usersData = [];
@@ -340,7 +442,9 @@ class UserService {
           } catch (parseError) {
             print('Error parsing response data: $parseError');
             if (attempts >= maxRetries) {
-              return UsersListResponse.error('Error procesando respuesta del servidor: $parseError');
+              return UsersListResponse.error(
+                'Error procesando respuesta del servidor: $parseError',
+              );
             }
             if (attempts < maxRetries) {
               await Future.delayed(Duration(seconds: attempts));
@@ -350,8 +454,13 @@ class UserService {
 
           // Convertir a lista de UserData y filtrar usuarios sin rol
           final users = usersData
-              .map((userData) => UserData.fromJson(userData as Map<String, dynamic>))
-              .where((user) => !user.hasValidRole) // Solo usuarios sin rol válido
+              .map(
+                (userData) =>
+                    UserData.fromJson(userData as Map<String, dynamic>),
+              )
+              .where(
+                (user) => !user.hasValidRole,
+              ) // Solo usuarios sin rol válido
               .toList();
 
           return UsersListResponse.success(
@@ -360,7 +469,9 @@ class UserService {
           );
         } else {
           // Si es un error de cliente (4xx), no reintentar
-          if (response.statusCode != null && response.statusCode! >= 400 && response.statusCode! < 500) {
+          if (response.statusCode != null &&
+              response.statusCode! >= 400 &&
+              response.statusCode! < 500) {
             return UsersListResponse.error(_getErrorMessage(response));
           }
 
@@ -374,7 +485,6 @@ class UserService {
         if (attempts < maxRetries) {
           await Future.delayed(Duration(seconds: attempts));
         }
-
       } catch (e) {
         print('Error en getUsersWithoutRole attempt $attempts: $e');
         if (attempts >= maxRetries) {
@@ -408,7 +518,9 @@ class UserService {
           requiresAuth: true,
         );
 
-        print('UserService.getAllUsers - Attempt: $attempts, Success: ${response.success}');
+        print(
+          'UserService.getAllUsers - Attempt: $attempts, Success: ${response.success}',
+        );
 
         if (response.success && response.data != null) {
           List<dynamic> usersData = [];
@@ -419,7 +531,9 @@ class UserService {
           } catch (parseError) {
             print('Error parsing response data: $parseError');
             if (attempts >= maxRetries) {
-              return UsersListResponse.error('Error procesando respuesta del servidor: $parseError');
+              return UsersListResponse.error(
+                'Error procesando respuesta del servidor: $parseError',
+              );
             }
             if (attempts < maxRetries) {
               await Future.delayed(Duration(seconds: attempts));
@@ -429,8 +543,13 @@ class UserService {
 
           // Convertir a lista de UserData - SIN filtrar por rol (excepto admins si es necesario)
           final users = usersData
-              .map((userData) => UserData.fromJson(userData as Map<String, dynamic>))
-              .where((user) => user.rol.toLowerCase() != 'admin') // Opcional: excluir admins
+              .map(
+                (userData) =>
+                    UserData.fromJson(userData as Map<String, dynamic>),
+              )
+              .where(
+                (user) => user.rol.toLowerCase() != 'admin',
+              ) // Opcional: excluir admins
               .toList();
 
           return UsersListResponse.success(
@@ -439,7 +558,9 @@ class UserService {
           );
         } else {
           // Si es un error de cliente (4xx), no reintentar
-          if (response.statusCode != null && response.statusCode! >= 400 && response.statusCode! < 500) {
+          if (response.statusCode != null &&
+              response.statusCode! >= 400 &&
+              response.statusCode! < 500) {
             return UsersListResponse.error(_getErrorMessage(response));
           }
 
@@ -453,7 +574,6 @@ class UserService {
         if (attempts < maxRetries) {
           await Future.delayed(Duration(seconds: attempts));
         }
-
       } catch (e) {
         print('Error en getAllUsers attempt $attempts: $e');
         if (attempts >= maxRetries) {
@@ -488,7 +608,9 @@ class UserService {
           requiresAuth: true,
         );
 
-        print('UserService.getUsersByRole - Attempt: $attempts, Role: $role, Success: ${response.success}');
+        print(
+          'UserService.getUsersByRole - Attempt: $attempts, Role: $role, Success: ${response.success}',
+        );
 
         if (response.success && response.data != null) {
           List<dynamic> usersData = [];
@@ -499,7 +621,9 @@ class UserService {
           } catch (parseError) {
             print('Error parsing response data: $parseError');
             if (attempts >= maxRetries) {
-              return UsersListResponse.error('Error procesando respuesta del servidor: $parseError');
+              return UsersListResponse.error(
+                'Error procesando respuesta del servidor: $parseError',
+              );
             }
             if (attempts < maxRetries) {
               await Future.delayed(Duration(seconds: attempts));
@@ -509,7 +633,10 @@ class UserService {
 
           // Convertir a lista de UserData
           final users = usersData
-              .map((userData) => UserData.fromJson(userData as Map<String, dynamic>))
+              .map(
+                (userData) =>
+                    UserData.fromJson(userData as Map<String, dynamic>),
+              )
               .toList();
 
           return UsersListResponse.success(
@@ -518,7 +645,9 @@ class UserService {
           );
         } else {
           // Si es un error de cliente (4xx), no reintentar
-          if (response.statusCode != null && response.statusCode! >= 400 && response.statusCode! < 500) {
+          if (response.statusCode != null &&
+              response.statusCode! >= 400 &&
+              response.statusCode! < 500) {
             return UsersListResponse.error(_getErrorMessage(response));
           }
 
@@ -532,7 +661,6 @@ class UserService {
         if (attempts < maxRetries) {
           await Future.delayed(Duration(seconds: attempts));
         }
-
       } catch (e) {
         print('Error en getUsersByRole attempt $attempts: $e');
         if (attempts >= maxRetries) {
@@ -569,7 +697,9 @@ class UserService {
           requiresAuth: true,
         );
 
-        print('UserService.assignRole - Attempt: $attempts, Success: ${response.success}');
+        print(
+          'UserService.assignRole - Attempt: $attempts, Success: ${response.success}',
+        );
 
         if (response.success && response.data != null) {
           final userData = _extractUserData(response.data!);
@@ -583,7 +713,9 @@ class UserService {
           }
         } else {
           // Si es un error de cliente (4xx), no reintentar
-          if (response.statusCode != null && response.statusCode! >= 400 && response.statusCode! < 500) {
+          if (response.statusCode != null &&
+              response.statusCode! >= 400 &&
+              response.statusCode! < 500) {
             return UserResponse.error(_getErrorMessage(response));
           }
 
@@ -597,7 +729,6 @@ class UserService {
         if (attempts < maxRetries) {
           await Future.delayed(Duration(seconds: attempts));
         }
-
       } catch (e) {
         print('Error en assignRole attempt $attempts: $e');
         if (attempts >= maxRetries) {
@@ -677,8 +808,75 @@ class UserService {
 
   // MÉTODOS PRIVADOS AUXILIARES
 
+  static DatabaseResponse<List<UserData>> _mapUsersResponse(
+    DatabaseResponse<dynamic> response, {
+    bool? knownStatus,
+  }) {
+    if (!response.success || response.data == null) {
+      return DatabaseResponse.error(
+        response.error ?? 'No se pudieron obtener los usuarios',
+        response.statusCode,
+      );
+    }
+
+    try {
+      final users = _extractUsersArray(response.data)
+          .whereType<Map>()
+          .map((json) => UserData.fromJson(Map<String, dynamic>.from(json)))
+          .map(
+            (user) =>
+                knownStatus == null ? user : user.copyWith(activo: knownStatus),
+          )
+          .toList();
+      return DatabaseResponse.success(users, statusCode: response.statusCode);
+    } catch (_) {
+      return DatabaseResponse.error(
+        'La respuesta de usuarios no tiene el formato esperado',
+        response.statusCode,
+      );
+    }
+  }
+
+  static DatabaseResponse<UserData> _mapUserResponse(
+    DatabaseResponse<dynamic> response, {
+    bool? knownStatus,
+  }) {
+    if (!response.success || response.data == null) {
+      return DatabaseResponse.error(
+        response.error ?? 'No se pudo obtener el usuario',
+        response.statusCode,
+      );
+    }
+
+    try {
+      dynamic rawData = response.data;
+      if (rawData is String) {
+        rawData = json.decode(rawData);
+      }
+      if (rawData is! Map) {
+        throw const FormatException();
+      }
+      final extracted = _extractUserData(Map<String, dynamic>.from(rawData));
+      if (extracted == null) {
+        throw const FormatException();
+      }
+      var user = UserData.fromJson(extracted);
+      if (knownStatus != null) {
+        user = user.copyWith(activo: knownStatus);
+      }
+      return DatabaseResponse.success(user, statusCode: response.statusCode);
+    } catch (_) {
+      return DatabaseResponse.error(
+        'La respuesta del usuario no tiene el formato esperado',
+        response.statusCode,
+      );
+    }
+  }
+
   /// Extraer datos de usuario de diferentes estructuras de respuesta
-  static Map<String, dynamic>? _extractUserData(Map<String, dynamic> responseData) {
+  static Map<String, dynamic>? _extractUserData(
+    Map<String, dynamic> responseData,
+  ) {
     // El servidor puede retornar:
     // - { user: {userData} }
     // - { data: {userData} }
@@ -689,7 +887,9 @@ class UserService {
       return responseData['data'] as Map<String, dynamic>;
     } else {
       // Verificar si contiene campos de usuario directamente
-      if (responseData.containsKey('id_usuario') || responseData.containsKey('nombre') || responseData.containsKey('email')) {
+      if (responseData.containsKey('id_usuario') ||
+          responseData.containsKey('nombre') ||
+          responseData.containsKey('email')) {
         return responseData;
       }
     }
@@ -699,7 +899,7 @@ class UserService {
   /// Extraer array de usuarios de diferentes estructuras de respuesta
   static List<dynamic> _extractUsersArray(dynamic responseData) {
     if (responseData is String) {
-      final parsedData = json.decode(responseData as String);
+      final parsedData = json.decode(responseData);
       return _extractUsersArray(parsedData);
     } else if (responseData is List<dynamic>) {
       return responseData;
@@ -722,9 +922,9 @@ class UserService {
 
   /// Actualizar usuario sin archivo usando PUT
   static Future<DatabaseResponse<Map<String, dynamic>>> _updateUserWithoutFile(
-      String userId,
-      Map<String, String> fields,
-      ) async {
+    String userId,
+    Map<String, String> fields,
+  ) async {
     try {
       // Convertir a Map<String, dynamic>
       final data = fields.map((key, value) => MapEntry(key, value as dynamic));

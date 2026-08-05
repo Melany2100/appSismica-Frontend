@@ -58,7 +58,9 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
 
       // Verificar permisos de administrador
       if (_userRole != 'admin') {
-        _handleUnauthorizedAccess('Acceso denegado: Se requieren permisos de administrador');
+        _handleUnauthorizedAccess(
+          'Acceso denegado: Se requieren permisos de administrador',
+        );
         return;
       }
 
@@ -80,14 +82,15 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
         await prefs.setBool('isFromRegistration', false);
         await prefs.setBool('isFirstLogin', false);
       } else if (isFirstLogin) {
-        debugPrint('DETECTADO: Admin viene de registro, aplicando estrategia especial...');
+        debugPrint(
+          'DETECTADO: Admin viene de registro, aplicando estrategia especial...',
+        );
         await _loadAdminDataFromServerWithRegistrationFallback();
         await prefs.setBool('isFirstLogin', false);
       } else {
         debugPrint('Admin login normal, usando flujo estándar...');
         await _loadAdminDataFromServer();
       }
-
     } catch (e) {
       debugPrint('Error en _loadUserData: $e');
       setState(() {
@@ -97,7 +100,7 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
     }
   }
 
-// NUEVO MÉTODO para admin recién registrado
+  // NUEVO MÉTODO para admin recién registrado
   Future<void> _loadAdminDataFromRegistrationWithFallback() async {
     try {
       debugPrint('ADMIN RECIÉN REGISTRADO - Configurando panel...');
@@ -135,7 +138,9 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
           final userData = response.data!;
 
           if (userData.userInfo.rol.toLowerCase() != 'admin') {
-            _handleUnauthorizedAccess('El usuario no tiene permisos de administrador');
+            _handleUnauthorizedAccess(
+              'El usuario no tiene permisos de administrador',
+            );
             return;
           }
 
@@ -182,7 +187,9 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
           _errorMessage = null;
         });
 
-        debugPrint('ADMIN RECIÉN REGISTRADO - Datos locales aplicados exitosamente');
+        debugPrint(
+          'ADMIN RECIÉN REGISTRADO - Datos locales aplicados exitosamente',
+        );
 
         // MENSAJE ESPECIAL PARA ADMIN RECIÉN REGISTRADO
         if (mounted) {
@@ -201,7 +208,6 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
           );
         }
       }
-
     } catch (e) {
       debugPrint('ADMIN RECIÉN REGISTRADO - Error: $e');
       setState(() {
@@ -235,7 +241,9 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
 
         // Verificar que el usuario realmente es admin
         if (userData.userInfo.rol.toLowerCase() != 'admin') {
-          _handleUnauthorizedAccess('El usuario no tiene permisos de administrador');
+          _handleUnauthorizedAccess(
+            'El usuario no tiene permisos de administrador',
+          );
           return;
         }
 
@@ -257,18 +265,22 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
         debugPrint('Datos de administrador cargados exitosamente');
         debugPrint('  - Usuario: $_userName');
         debugPrint('  - Rol confirmado: ${_userInfo?.rol}');
-
       } else {
-        debugPrint('Error en respuesta del servidor: ${response.error ?? response.message}');
+        debugPrint(
+          'Error en respuesta del servidor: ${response.error ?? response.message}',
+        );
 
         // Si es un error 401 o 403, verificar permisos
-        if (response.error?.contains('401') == true || response.error?.contains('403') == true) {
+        if (response.error?.contains('401') == true ||
+            response.error?.contains('403') == true) {
           _handleUnauthorizedAccess('Acceso denegado: Permisos insuficientes');
           return;
         }
 
         if (response.error?.contains('404') == true) {
-          _handleInvalidSession('Sesión expirada. Por favor, inicie sesión nuevamente');
+          _handleInvalidSession(
+            'Sesión expirada. Por favor, inicie sesión nuevamente',
+          );
           return;
         }
 
@@ -312,7 +324,9 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
 
         // Verificar permisos de admin
         if (userData.userInfo.rol.toLowerCase() != 'admin') {
-          _handleUnauthorizedAccess('El usuario registrado no tiene permisos de administrador');
+          _handleUnauthorizedAccess(
+            'El usuario registrado no tiene permisos de administrador',
+          );
           return;
         }
 
@@ -328,13 +342,13 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
 
         await _updateSharedPreferences(userData.userInfo);
         debugPrint('REGISTRO ADMIN - Datos del servidor cargados exitosamente');
-
       } else {
         // FALLÓ HOMESERVICE - USAR FALLBACK CON DATOS LOCALES
-        debugPrint('REGISTRO ADMIN - HomeService falló, usando fallback con datos locales');
+        debugPrint(
+          'REGISTRO ADMIN - HomeService falló, usando fallback con datos locales',
+        );
         await _loadAdminDataWithLocalFallback();
       }
-
     } catch (e) {
       debugPrint('REGISTRO ADMIN - Error cargando del servidor: $e');
       // FALLBACK CON DATOS LOCALES
@@ -388,13 +402,14 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('¡Bienvenido Administrador! Panel configurado correctamente.'),
+            content: Text(
+              '¡Bienvenido Administrador! Panel configurado correctamente.',
+            ),
             backgroundColor: Colors.red,
             duration: Duration(seconds: 4),
           ),
         );
       }
-
     } catch (e) {
       debugPrint('REGISTRO ADMIN - Error en fallback local: $e');
       setState(() {
@@ -528,7 +543,9 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Cerrar sesión de administrador'),
-          content: const Text('¿Está seguro que desea cerrar la sesión de administrador?'),
+          content: const Text(
+            '¿Está seguro que desea cerrar la sesión de administrador?',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -540,7 +557,10 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
                 _logout();
               },
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: const Text('Cerrar sesión', style: TextStyle(color: Colors.white)),
+              child: const Text(
+                'Cerrar sesión',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         );
@@ -556,7 +576,10 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
           children: [
             CircularProgressIndicator(color: Colors.red),
             SizedBox(height: 16),
-            Text('Cargando panel de administración...', style: TextStyle(color: AppColors.text)),
+            Text(
+              'Cargando panel de administración...',
+              style: TextStyle(color: AppColors.text),
+            ),
           ],
         ),
       );
@@ -574,9 +597,11 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    _errorMessage!.contains('Acceso denegado') || _errorMessage!.contains('permisos')
+                    _errorMessage!.contains('Acceso denegado') ||
+                            _errorMessage!.contains('permisos')
                         ? Icons.admin_panel_settings
-                        : _errorMessage!.contains('sesión') || _errorMessage!.contains('token')
+                        : _errorMessage!.contains('sesión') ||
+                              _errorMessage!.contains('token')
                         ? Icons.lock_outline
                         : Icons.error_outline,
                     size: 64,
@@ -586,7 +611,8 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
                   Text(
                     _errorMessage!.contains('Acceso denegado')
                         ? 'Acceso Restringido'
-                        : _errorMessage!.contains('sesión') || _errorMessage!.contains('token')
+                        : _errorMessage!.contains('sesión') ||
+                              _errorMessage!.contains('token')
                         ? 'Sesión Expirada'
                         : 'Error del Sistema',
                     style: const TextStyle(
@@ -613,8 +639,13 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
                       !_errorMessage!.contains('token'))
                     ElevatedButton(
                       onPressed: _refreshData,
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                      child: const Text('Reintentar', style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                      ),
+                      child: const Text(
+                        'Reintentar',
+                        style: TextStyle(color: Colors.white),
+                      ),
                     ),
                 ],
               ),
@@ -661,10 +692,7 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Colors.red.withOpacity(0.1),
-            Colors.red.withOpacity(0.05),
-          ],
+          colors: [Colors.red.withOpacity(0.1), Colors.red.withOpacity(0.05)],
         ),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.red.withOpacity(0.2)),
@@ -729,10 +757,7 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
                   Expanded(
                     child: Text(
                       'Admin: ${_userInfo!.email}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.blue,
-                      ),
+                      style: const TextStyle(fontSize: 12, color: Colors.blue),
                     ),
                   ),
                 ],
@@ -743,10 +768,7 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
 
           const Text(
             'Desde aquí puede gestionar edificios, usuarios e inspecciones.',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.gray500,
-            ),
+            style: TextStyle(fontSize: 14, color: AppColors.gray500),
           ),
         ],
       ),
@@ -775,7 +797,11 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.admin_panel_settings, color: Colors.red, size: 20),
+              const Icon(
+                Icons.admin_panel_settings,
+                color: Colors.red,
+                size: 20,
+              ),
               const SizedBox(width: 8),
               const Text(
                 'Información del Administrador',
@@ -791,9 +817,17 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
           if (_userInfo!.email.isNotEmpty)
             _buildInfoRow(Icons.email, 'Email', _userInfo!.email),
           const SizedBox(height: 8),
-          _buildInfoRow(Icons.badge, 'ID Administrador', _userInfo!.idUsuario.toString()),
+          _buildInfoRow(
+            Icons.badge,
+            'ID Administrador',
+            _userInfo!.idUsuario.toString(),
+          ),
           const SizedBox(height: 8),
-          _buildInfoRow(Icons.verified_user, 'Permisos', 'Administrador del sistema'),
+          _buildInfoRow(
+            Icons.verified_user,
+            'Permisos',
+            'Administrador del sistema',
+          ),
         ],
       ),
     );
@@ -815,10 +849,7 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(
-              fontSize: 14,
-              color: AppColors.text,
-            ),
+            style: const TextStyle(fontSize: 14, color: AppColors.text),
           ),
         ),
       ],
@@ -838,14 +869,15 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
         child: const Center(
           child: Column(
             children: [
-              Icon(Icons.analytics_outlined, size: 48, color: AppColors.gray500),
+              Icon(
+                Icons.analytics_outlined,
+                size: 48,
+                color: AppColors.gray500,
+              ),
               SizedBox(height: 8),
               Text(
                 'Estadísticas no disponibles',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: AppColors.gray500,
-                ),
+                style: TextStyle(fontSize: 16, color: AppColors.gray500),
               ),
             ],
           ),
@@ -933,7 +965,12 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -964,10 +1001,7 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
           ),
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppColors.gray500,
-            ),
+            style: const TextStyle(fontSize: 12, color: AppColors.gray500),
           ),
         ],
       ),
@@ -1001,10 +1035,12 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
               'Gestión de Edificios',
               'https://cdn-icons-png.flaticon.com/512/1441/1441359.png',
               Icons.apartment,
-                  () {
+              () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const BuildingsScreen()),
+                  MaterialPageRoute(
+                    builder: (context) => const BuildingsScreen(),
+                  ),
                 );
               },
             ),
@@ -1013,12 +1049,21 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
               'Edificios Evaluados',
               'https://cdn-icons-png.flaticon.com/128/12218/12218407.png',
               Icons.assignment_turned_in,
-                  () {
+              () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const AssessedBuildingsPage()),
+                  MaterialPageRoute(
+                    builder: (context) => const AssessedBuildingsPage(),
+                  ),
                 );
               },
+            ),
+            _buildAdminMenuOption(
+              context,
+              'Usuarios',
+              '',
+              Icons.manage_accounts,
+              () => Navigator.pushNamed(context, '/administracion/usuarios'),
             ),
           ],
         ),
@@ -1042,16 +1087,14 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
             icon: const Icon(Icons.person),
             onPressed: (_userId != null && _token != null)
                 ? () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ProfileAdminScreen(
-                    userId: _userId,
-                    token: _token,
-                  ),
-                ),
-              );
-            }
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            ProfileAdminScreen(userId: _userId, token: _token),
+                      ),
+                    );
+                  }
                 : null,
             color: (_userId != null && _token != null)
                 ? AppColors.text
@@ -1064,12 +1107,12 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
   }
 
   Widget _buildAdminMenuOption(
-      BuildContext context,
-      String title,
-      String imageUrl,
-      IconData fallbackIcon,
-      VoidCallback onTap,
-      ) {
+    BuildContext context,
+    String title,
+    String imageUrl,
+    IconData fallbackIcon,
+    VoidCallback onTap,
+  ) {
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -1092,39 +1135,46 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Image.network(
-                imageUrl,
-                width: 60,
-                height: 60,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      fallbackIcon,
-                      size: 30,
-                      color: Colors.red,
-                    ),
-                  );
-                },
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Container(
-                    width: 60,
-                    height: 60,
-                    child: const Center(
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.red,
+              if (imageUrl.isEmpty)
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(fallbackIcon, size: 30, color: Colors.red),
+                )
+              else
+                Image.network(
+                  imageUrl,
+                  width: 60,
+                  height: 60,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                    ),
-                  );
-                },
-              ),
+                      child: Icon(fallbackIcon, size: 30, color: Colors.red),
+                    );
+                  },
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      width: 60,
+                      height: 60,
+                      child: const Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.red,
+                        ),
+                      ),
+                    );
+                  },
+                ),
               const SizedBox(height: 12),
               Text(
                 title,

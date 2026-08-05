@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/services/auth_service.dart';
-import '../../core/services/database_service.dart';
+import '../../core/services/session_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/connection_test_android.dart';
@@ -49,6 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
         final token = authResponse.token!;
         final userId = authResponse.userId!.toString();
         final userName = authResponse.userNameValue; // Ya incluye fallback
+        final userRole = authResponse.userRoleValue;
 
         print('Datos del usuario obtenidos:');
         print('  - userName: $userName');
@@ -56,10 +56,10 @@ class _LoginScreenState extends State<LoginScreen> {
         print('  - token: ${token.substring(0, 10)}...');
 
         // OBTENER ROL DEL USUARIO - Solo si es necesario
-        String userRole = 'user'; // Valor por defecto
+        //String userRole = 'user'; // Valor por defecto
 
         // El AuthService ya configuró el token, podemos hacer llamadas autenticadas
-        if (authResponse.nombre != null) {
+        /* if (authResponse.nombre != null) {
           // Si AuthService obtuvo el nombre, también intentar obtener el rol
           try {
             final roleResponse = await _getUserRole(token, userId);
@@ -70,16 +70,11 @@ class _LoginScreenState extends State<LoginScreen> {
             print('Error obteniendo rol: $e');
             // Continuar con rol por defecto
           }
-        }
+        }*/
 
         print('Rol final del usuario: $userRole');
 
-        // Guardar en SharedPreferences
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('accessToken', token);
-        await prefs.setString('userId', userId);
-        await prefs.setString('userName', userName);
-        await prefs.setString('userRole', userRole);
+        await SessionService.persist(token: token, user: authResponse.user!);
 
         // Verificar que se guardaron correctamente
         print('Datos guardados en SharedPreferences:');
@@ -135,7 +130,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // Método auxiliar para obtener rol del usuario
-  Future<String?> _getUserRole(String token, String userId) async {
+  /*Future<String?> _getUserRole(String token, String userId) async {
     try {
       // Usar DatabaseService directamente ya que el token está configurado
       final response = await DatabaseService.get<dynamic>(
@@ -160,7 +155,7 @@ class _LoginScreenState extends State<LoginScreen> {
       print('Error obteniendo rol: $e');
     }
     return null;
-  }
+  }*/
 
   // Método auxiliar para redirección
   void _redirectByRole(String userRole) {
@@ -172,25 +167,17 @@ class _LoginScreenState extends State<LoginScreen> {
         Navigator.pushNamedAndRemoveUntil(
           context,
           '/homeAdmin',
-              (route) => false,
+          (route) => false,
         );
         break;
       case 'inspector':
       case 'ayudante':
         print('Navegando a HomePage (inspector/ayudante)...');
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/home',
-              (route) => false,
-        );
+        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
         break;
       default:
         print('Navegando a HomePage (usuario general)...');
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/home',
-              (route) => false,
-        );
+        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
         break;
     }
   }
@@ -263,13 +250,13 @@ class _LoginScreenState extends State<LoginScreen> {
                             onPressed: _loading ? null : _loginBackend,
                             child: _loading
                                 ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
                                 : const Text('Iniciar sesión'),
                           ),
                         ),

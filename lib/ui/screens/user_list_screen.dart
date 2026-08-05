@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../../core/theme/app_colors.dart';
+
+import '../../core/services/session_service.dart';
 import '../../core/services/user_service.dart';
+import '../../core/theme/app_colors.dart';
+import '../../data/models/database_response.dart';
 import '../../data/models/user_response.dart';
-import 'assign_role_screen.dart';
 
 class UserListScreen extends StatefulWidget {
   const UserListScreen({super.key});
@@ -13,127 +14,199 @@ class UserListScreen extends StatefulWidget {
 }
 
 class _UserListScreenState extends State<UserListScreen> {
-  List<UserData> _users = [];
-  List<UserData> _filteredUsers = [];
+  static const Map<String, String> _roleLabels = {
+    'admin': 'Administrador',
+    'inspector': 'Inspector',
+    'ayudante': 'Ayudante',
+  };
+
+  final TextEditingController _searchController = TextEditingController();
+  final Set<int> _busyUsers = <int>{};
+  List<UserData> _users = <UserData>[];
+  String _statusFilter = 'all';
+  String _roleFilter = 'all';
   bool _loading = true;
-  String _searchQuery = '';
-  String? _errorMessage;
-  String _selectedFilter = 'todos'; // todos, sin_rol, inspector, ayudante
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _fetchUsers();
+    _searchController.addListener(_refreshFilters);
+    _loadUsers();
   }
 
-  Future<void> _fetchUsers() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('accessToken') ?? '';
+  @override
+  void dispose() {
+    _searchController
+      ..removeListener(_refreshFilters)
+      ..dispose();
+    super.dispose();
+  }
 
-      if (token.isEmpty) {
-        setState(() {
-          _loading = false;
-          _errorMessage = 'Token de autenticación no encontrado';
-        });
-        return;
-      }
+  void _refreshFilters() {
+    if (mounted) setState(() {});
+  }
 
-      debugPrint('Cargando usuarios con token: ${token.substring(0, 20)}...');
-
-      // Usar el método para obtener TODOS los usuarios (excepto admins)
-      final response = await UserService.getAllUsers(
-        token: token,
-        maxRetries: 2,
-      );
-
-      if (response.success && response.data != null) {
-        debugPrint('Usuarios cargados exitosamente: ${response.data!.length}');
-        setState(() {
-          _users = response.data!;
-          _applyFilters(); // Aplicar filtros después de cargar datos
-          _loading = false;
-          _errorMessage = null;
-        });
-      } else {
-        debugPrint('Error cargando usuarios: ${response.error}');
-        setState(() {
-          _loading = false;
-          _errorMessage = response.error ?? 'Error al cargar usuarios';
-        });
-      }
-    } catch (e) {
-      debugPrint('Excepción en _fetchUsers: $e');
+  Future<void> _loadUsers({bool showLoader = true}) async {
+    if (showLoader && mounted) {
       setState(() {
-        _loading = false;
-        _errorMessage = 'Error de conexión: $e';
+        _loading = true;
+        _error = null;
       });
     }
-  }
 
-  void _applyFilters() {
-    List<UserData> filteredByRole = _users;
+    final response = await UserService.getAll();
+    if (!mounted) return;
 
-    // Filtrar por rol seleccionado
-    switch (_selectedFilter) {
-      case 'sin_rol':
-        filteredByRole = _users.where((user) {
-          final rol = user.rol.trim().toLowerCase();
-          return rol.isEmpty || rol == 'null' || rol == 'sin asignar' || rol == 'undefined';
-        }).toList();
-        break;
-      case 'inspector':
-        filteredByRole = _users.where((user) => user.rol.toLowerCase() == 'inspector').toList();
-        break;
-      case 'ayudante':
-        filteredByRole = _users.where((user) => user.rol.toLowerCase() == 'ayudante').toList();
-        break;
-      case 'todos':
-      default:
-        filteredByRole = _users;
-        break;
-    }
-
-    // Aplicar filtro de búsqueda
-    if (_searchQuery.isNotEmpty) {
-      filteredByRole = filteredByRole.where((user) {
-        final nombre = user.nombre.toLowerCase();
-        final cedula = user.cedula?.toLowerCase() ?? '';
-        final email = user.email.toLowerCase();
-        final queryLower = _searchQuery.toLowerCase();
-
-        return nombre.contains(queryLower) ||
-            cedula.contains(queryLower) ||
-            email.contains(queryLower);
-      }).toList();
+    if (response.success && response.data != null) {
+      setState(() {
+        _users = response.data!;
+        _loading = false;
+        _error = null;
+      });
+      return;
     }
 
     setState(() {
-      _filteredUsers = filteredByRole;
+      _loading = false;
+      _error = response.statusCode == 403
+          ? 'No tienes permisos para realizar esta acción.'
+          : response.error ?? 'No se pudieron cargar los usuarios';
     });
   }
 
-  void _filterUsers(String query) {
-    setState(() {
-      _searchQuery = query;
-    });
-    _applyFilters();
+  List<UserData> get _visibleUsers {
+    final query = _searchController.text.trim().toLowerCase();
+    return _users.where((user) {
+      final matchesStatus = switch (_statusFilter) {
+        'active' => user.activo,
+        'inactive' => !user.activo,
+        _ => true,
+      };
+      final matchesRole =
+          _roleFilter == 'all' || user.rol.toLowerCase() == _roleFilter;
+      final matchesQuery =
+          query.isEmpty ||
+          user.nombre.toLowerCase().contains(query) ||
+          user.email.toLowerCase().contains(query) ||
+          (user.cedula?.toLowerCase().contains(query) ?? false);
+      return matchesStatus && matchesRole && matchesQuery;
+    }).toList();
   }
 
-  void _changeRoleFilter(String filter) {
-    setState(() {
-      _selectedFilter = filter;
-    });
-    _applyFilters();
+  bool _isCurrentUser(UserData user) =>
+      SessionService.currentUser?.idUsuario == user.idUsuario;
+
+  Future<bool> _confirm({
+    required String title,
+    required String message,
+    required String action,
+    bool destructive = false,
+  }) async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Text(title),
+            content: Text(message),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                style: destructive
+                    ? FilledButton.styleFrom(backgroundColor: Colors.red)
+                    : null,
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: Text(action),
+              ),
+            ],
+          ),
+        ) ??
+        false;
   }
 
-  Future<void> _refreshUsers() async {
-    setState(() {
-      _loading = true;
-      _errorMessage = null;
-      _searchQuery = '';
-    });
-    await _fetchUsers();
+  Future<void> _changeRole(UserData user, String? newRole) async {
+    if (newRole == null || newRole == user.rol.toLowerCase()) return;
+    if (_isCurrentUser(user)) {
+      _showMessage(
+        'No puedes quitarte o cambiarte tu propio rol temporalmente.',
+        isError: true,
+      );
+      return;
+    }
+
+    final confirmed = await _confirm(
+      title: 'Cambiar rol',
+      message: '¿Cambiar el rol de ${user.nombre} a ${_roleLabels[newRole]}?',
+      action: 'Cambiar',
+    );
+    if (!confirmed || !mounted) return;
+
+    await _runUserAction(
+      user,
+      () => UserService.updateRole(user.idUsuario, newRole),
+      successMessage: 'Rol actualizado correctamente.',
+    );
+  }
+
+  Future<void> _changeStatus(UserData user) async {
+    if (_isCurrentUser(user)) {
+      _showMessage('No puedes desactivar tu propia cuenta.', isError: true);
+      return;
+    }
+
+    final activate = !user.activo;
+    final confirmed = await _confirm(
+      title: activate ? 'Reactivar usuario' : 'Desactivar usuario',
+      message: activate
+          ? '¿Reactivar la cuenta de ${user.nombre}?'
+          : '¿Desactivar la cuenta de ${user.nombre}?',
+      action: activate ? 'Reactivar' : 'Desactivar',
+      destructive: !activate,
+    );
+    if (!confirmed || !mounted) return;
+
+    await _runUserAction(
+      user,
+      () => UserService.updateStatus(user.idUsuario, activate),
+      successMessage: activate
+          ? 'Usuario reactivado correctamente.'
+          : 'Usuario desactivado correctamente.',
+    );
+  }
+
+  Future<void> _runUserAction(
+    UserData user,
+    Future<DatabaseResponse<UserData>> Function() action, {
+    required String successMessage,
+  }) async {
+    setState(() => _busyUsers.add(user.idUsuario));
+    final response = await action();
+    if (!mounted) return;
+
+    if (response.success == true) {
+      await _loadUsers(showLoader: false);
+      if (mounted) _showMessage(successMessage);
+    } else {
+      final message = response.statusCode == 403
+          ? 'No tienes permisos para realizar esta acción.'
+          : response.error?.toString() ?? 'No se pudo completar la acción';
+      _showMessage(message, isError: true);
+    }
+
+    if (mounted) {
+      setState(() => _busyUsers.remove(user.idUsuario));
+    }
+  }
+
+  void _showMessage(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+      ),
+    );
   }
 
   @override
@@ -141,422 +214,299 @@ class _UserListScreenState extends State<UserListScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Gestión de Usuarios'),
+        title: const Text('Administración de usuarios'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loading ? null : _refreshUsers,
+            onPressed: _loading ? null : _loadUsers,
             tooltip: 'Actualizar',
+            icon: const Icon(Icons.refresh),
           ),
         ],
       ),
       body: Column(
         children: [
-          // Campo de búsqueda
-          Container(
-            padding: const EdgeInsets.all(16),
-            color: Colors.white,
-            child: TextField(
-              decoration: const InputDecoration(
-                hintText: "Buscar por nombre, cédula o email",
-                prefixIcon: Icon(Icons.search, color: AppColors.primary),
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              ),
-              onChanged: _filterUsers,
-              controller: TextEditingController(text: _searchQuery),
-            ),
-          ),
-
-          // Filtros por rol
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            color: Colors.grey.shade50,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _buildFilterChip('todos', 'Todos', _getTotalCount()),
-                  const SizedBox(width: 8),
-                  _buildFilterChip('sin_rol', 'Sin Rol', _getCountByRole('sin_rol')),
-                  const SizedBox(width: 8),
-                  _buildFilterChip('inspector', 'Inspectores', _getCountByRole('inspector')),
-                  const SizedBox(width: 8),
-                  _buildFilterChip('ayudante', 'Ayudantes', _getCountByRole('ayudante')),
-                ],
-              ),
-            ),
-          ),
-
-          // Contenido principal
-          Expanded(
-            child: _buildBody(),
-          ),
+          _buildFilters(),
+          Expanded(child: _buildContent()),
         ],
       ),
     );
   }
 
-  Widget _buildFilterChip(String value, String label, int count) {
-    final isSelected = _selectedFilter == value;
-    final color = _getFilterColor(value);
-
-    return FilterChip(
-      selected: isSelected,
-      onSelected: (selected) => _changeRoleFilter(value),
-      label: Text(
-        '$label ($count)',
-        style: TextStyle(
-          color: isSelected ? Colors.white : color,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          fontSize: 12,
+  Widget _buildFilters() {
+    return Material(
+      color: Colors.white,
+      elevation: 1,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+        child: Column(
+          children: [
+            TextField(
+              controller: _searchController,
+              decoration: const InputDecoration(
+                labelText: 'Buscar por nombre, correo o cédula',
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _statusChip('all', 'Todos', _users.length),
+                        const SizedBox(width: 8),
+                        _statusChip(
+                          'active',
+                          'Activos',
+                          _users.where((user) => user.activo).length,
+                        ),
+                        const SizedBox(width: 8),
+                        _statusChip(
+                          'inactive',
+                          'Inactivos',
+                          _users.where((user) => !user.activo).length,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                DropdownButton<String>(
+                  value: _roleFilter,
+                  underline: const SizedBox.shrink(),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'all',
+                      child: Text('Todos los roles'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'admin',
+                      child: Text('Administrador'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'inspector',
+                      child: Text('Inspector'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'ayudante',
+                      child: Text('Ayudante'),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) setState(() => _roleFilter = value);
+                  },
+                ),
+              ],
+            ),
+          ],
         ),
       ),
-      selectedColor: color,
-      checkmarkColor: Colors.white,
-      backgroundColor: Colors.white,
-      side: BorderSide(color: color),
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 
-  Color _getFilterColor(String filter) {
-    switch (filter) {
-      case 'sin_rol':
-        return Colors.orange;
-      case 'inspector':
-        return Colors.blue;
-      case 'ayudante':
-        return Colors.green;
-      default:
-        return AppColors.primary;
-    }
+  Widget _statusChip(String value, String label, int count) {
+    return ChoiceChip(
+      selected: _statusFilter == value,
+      label: Text('$label ($count)'),
+      onSelected: (_) => setState(() => _statusFilter = value),
+    );
   }
 
-  int _getTotalCount() {
-    return _users.length;
-  }
-
-  int _getCountByRole(String role) {
-    switch (role) {
-      case 'sin_rol':
-        return _users.where((user) {
-          final rol = user.rol.trim().toLowerCase();
-          return rol.isEmpty || rol == 'null' || rol == 'sin asignar' || rol == 'undefined';
-        }).length;
-      case 'inspector':
-        return _users.where((user) => user.rol.toLowerCase() == 'inspector').length;
-      case 'ayudante':
-        return _users.where((user) => user.rol.toLowerCase() == 'ayudante').length;
-      default:
-        return 0;
-    }
-  }
-
-  Widget _buildBody() {
+  Widget _buildContent() {
     if (_loading) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) {
+      return RefreshIndicator(
+        onRefresh: _loadUsers,
+        child: ListView(
           children: [
-            CircularProgressIndicator(color: AppColors.primary),
-            SizedBox(height: 16),
-            Text(
-              'Cargando usuarios...',
-              style: TextStyle(color: AppColors.text),
+            const SizedBox(height: 100),
+            const Icon(Icons.error_outline, size: 56, color: Colors.red),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Text(_error!, textAlign: TextAlign.center),
+            ),
+            const SizedBox(height: 12),
+            Center(
+              child: FilledButton(
+                onPressed: _loadUsers,
+                child: const Text('Reintentar'),
+              ),
             ),
           ],
         ),
       );
     }
 
-    if (_errorMessage != null) {
+    final visibleUsers = _visibleUsers;
+    if (visibleUsers.isEmpty) {
       return RefreshIndicator(
-        onRefresh: _refreshUsers,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Container(
-            height: MediaQuery.of(context).size.height - 250,
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: Colors.red,
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Error al cargar usuarios',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.text,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32),
-                    child: Text(
-                      _errorMessage!,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: AppColors.gray500,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: _refreshUsers,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                    ),
-                    child: const Text('Reintentar'),
-                  ),
-                ],
-              ),
+        onRefresh: _loadUsers,
+        child: ListView(
+          children: const [
+            SizedBox(height: 120),
+            Icon(Icons.person_search, size: 64, color: Colors.grey),
+            SizedBox(height: 12),
+            Text(
+              'No hay usuarios que coincidan con los filtros.',
+              textAlign: TextAlign.center,
             ),
-          ),
-        ),
-      );
-    }
-
-    if (_filteredUsers.isEmpty) {
-      return RefreshIndicator(
-        onRefresh: _refreshUsers,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Container(
-            height: MediaQuery.of(context).size.height - 250,
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    _searchQuery.isNotEmpty ? Icons.search_off : Icons.people_outline,
-                    size: 64,
-                    color: AppColors.gray500,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    _searchQuery.isNotEmpty
-                        ? 'No se encontraron usuarios'
-                        : _getEmptyMessage(),
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.text,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _searchQuery.isNotEmpty
-                        ? 'Intenta con otros términos de búsqueda'
-                        : _getEmptySubMessage(),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppColors.gray500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          ],
         ),
       );
     }
 
     return RefreshIndicator(
-      onRefresh: _refreshUsers,
+      onRefresh: _loadUsers,
       child: ListView.builder(
-        itemCount: _filteredUsers.length,
         padding: const EdgeInsets.symmetric(vertical: 8),
-        itemBuilder: (context, index) {
-          final user = _filteredUsers[index];
-          return _buildUserCard(user);
-        },
+        itemCount: visibleUsers.length,
+        itemBuilder: (context, index) => _buildUserCard(visibleUsers[index]),
       ),
     );
-  }
-
-  String _getEmptyMessage() {
-    switch (_selectedFilter) {
-      case 'sin_rol':
-        return 'No hay usuarios sin rol';
-      case 'inspector':
-        return 'No hay inspectores';
-      case 'ayudante':
-        return 'No hay ayudantes';
-      default:
-        return 'No hay usuarios';
-    }
-  }
-
-  String _getEmptySubMessage() {
-    switch (_selectedFilter) {
-      case 'sin_rol':
-        return 'Todos los usuarios ya tienen un rol asignado';
-      case 'inspector':
-        return 'No hay usuarios con rol de inspector';
-      case 'ayudante':
-        return 'No hay usuarios con rol de ayudante';
-      default:
-        return 'No se encontraron usuarios en el sistema';
-    }
   }
 
   Widget _buildUserCard(UserData user) {
-    // Determinar color y estado del rol
-    Color roleColor;
-    String roleText;
-    bool hasRole = user.hasRole;
-
-    if (!hasRole) {
-      roleColor = Colors.orange;
-      roleText = "Sin rol asignado";
-    } else {
-      switch (user.rol.toLowerCase()) {
-        case 'inspector':
-          roleColor = Colors.blue;
-          roleText = "Inspector";
-          break;
-        case 'ayudante':
-          roleColor = Colors.green;
-          roleText = "Ayudante";
-          break;
-        default:
-          roleColor = Colors.grey;
-          roleText = user.rol.toUpperCase();
-      }
-    }
+    final busy = _busyUsers.contains(user.idUsuario);
+    final self = _isCurrentUser(user);
+    final image = user.hasProfileImage
+        ? NetworkImage(user.fotoPerfilUrl!)
+        : null;
 
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(16),
-        leading: CircleAvatar(
-          radius: 28,
-          backgroundImage: _getProfileImage(user),
-        ),
-        title: Text(
-          user.nombre.isNotEmpty ? user.nombre : 'Sin nombre',
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: AppColors.text,
-            fontSize: 16,
-          ),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
           children: [
-            const SizedBox(height: 4),
-            if (user.email.isNotEmpty) ...[
-              Row(
-                children: [
-                  const Icon(Icons.email, size: 14, color: AppColors.gray500),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      user.email,
-                      style: const TextStyle(color: AppColors.gray500, fontSize: 12),
-                      overflow: TextOverflow.ellipsis,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  radius: 27,
+                  backgroundImage: image,
+                  child: image == null ? const Icon(Icons.person) : null,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              user.nombre.isEmpty ? 'Sin nombre' : user.nombre,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                          if (self) ...[
+                            const SizedBox(width: 8),
+                            const Chip(
+                              visualDensity: VisualDensity.compact,
+                              label: Text('Tú'),
+                            ),
+                          ],
+                        ],
+                      ),
+                      Text(
+                        user.email,
+                        style: const TextStyle(color: AppColors.gray500),
+                      ),
+                      if (user.cedula?.isNotEmpty == true)
+                        Text(
+                          'CI: ${user.cedula}',
+                          style: const TextStyle(color: AppColors.gray500),
+                        ),
+                    ],
+                  ),
+                ),
+                if (busy)
+                  const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else
+                  _statusBadge(user.activo),
+              ],
+            ),
+            const Divider(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    initialValue:
+                        _roleLabels.containsKey(user.rol.toLowerCase())
+                        ? user.rol.toLowerCase()
+                        : null,
+                    decoration: const InputDecoration(
+                      labelText: 'Rol',
+                      border: OutlineInputBorder(),
+                      isDense: true,
                     ),
+                    items: _roleLabels.entries
+                        .map(
+                          (entry) => DropdownMenuItem(
+                            value: entry.key,
+                            child: Text(entry.value),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: busy || self
+                        ? null
+                        : (role) => _changeRole(user, role),
                   ),
-                ],
-              ),
-              const SizedBox(height: 2),
-            ],
-            if (user.cedula != null && user.cedula!.isNotEmpty) ...[
-              Row(
-                children: [
-                  const Icon(Icons.badge, size: 14, color: AppColors.gray500),
-                  const SizedBox(width: 4),
-                  Text(
-                    "CI: ${user.cedula}",
-                    style: const TextStyle(color: AppColors.gray500, fontSize: 12),
+                ),
+                const SizedBox(width: 12),
+                OutlinedButton.icon(
+                  onPressed: busy || self ? null : () => _changeStatus(user),
+                  icon: Icon(user.activo ? Icons.person_off : Icons.person_add),
+                  label: Text(user.activo ? 'Desactivar' : 'Reactivar'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: user.activo ? Colors.red : Colors.green,
                   ),
-                ],
-              ),
-              const SizedBox(height: 4),
-            ],
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: roleColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: roleColor.withOpacity(0.3)),
-              ),
-              child: Text(
-                roleText,
-                style: TextStyle(
-                  color: roleColor,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
+                ),
+              ],
+            ),
+            if (self) ...[
+              const SizedBox(height: 8),
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Tu rol y estado no se pueden modificar desde esta pantalla.',
+                  style: TextStyle(fontSize: 12, color: AppColors.gray500),
                 ),
               ),
-            ),
+            ],
           ],
         ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (hasRole)
-              Icon(Icons.verified, size: 18, color: roleColor),
-            const SizedBox(width: 4),
-            const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.primary),
-          ],
-        ),
-        onTap: () async {
-          // Convertir UserData a Map para compatibilidad con AssignRoleScreen
-          final userMap = {
-            'id': user.idUsuario,
-            'nombre': user.nombre,
-            'email': user.email,
-            'cedula': user.cedula,
-            'telefono': user.telefono,
-            'rol': user.rol,
-            'foto_perfil_url': user.fotoPerfilUrl,
-          };
-
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => AssignRoleScreen(user: userMap),
-            ),
-          );
-
-          // Recargar lista si se modificó un rol
-          if (result == true) {
-            _refreshUsers();
-          }
-        },
       ),
     );
   }
 
-  // Helper method para manejo seguro de imágenes de perfil
-  ImageProvider _getProfileImage(UserData user) {
-    try {
-      if (user.fotoPerfilUrl != null && user.fotoPerfilUrl!.isNotEmpty) {
-        final uri = Uri.tryParse(user.fotoPerfilUrl!);
-        if (uri != null && uri.isAbsolute) {
-          return NetworkImage(user.fotoPerfilUrl!);
-        }
-      }
-    } catch (e) {
-      debugPrint('Error cargando imagen de perfil para ${user.nombre}: $e');
-    }
-    return const AssetImage("assets/images/avatar_placeholder.png") as ImageProvider;
+  Widget _statusBadge(bool active) {
+    final color = active ? Colors.green : Colors.grey;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        active ? 'Activo' : 'Inactivo',
+        style: TextStyle(color: color, fontWeight: FontWeight.w600),
+      ),
+    );
   }
 }

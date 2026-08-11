@@ -26,6 +26,7 @@ dependencies:
 
   mime: ^2.0.0
   shared_preferences: ^2.3.5
+  fl_chart: ^1.2.0
 
 dev_dependencies:
   flutter_test:

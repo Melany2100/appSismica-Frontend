@@ -7,6 +7,7 @@ import '../../data/models/home_response.dart';
 import 'buildings_screen.dart';
 import 'assessed_buildings_screen.dart';
 import 'profile_admin_screen.dart';
+import 'general_summary_screen.dart';
 
 class HomeAdminScreen extends StatefulWidget {
   const HomeAdminScreen({super.key});
@@ -598,10 +599,10 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
                 children: [
                   Icon(
                     _errorMessage!.contains('Acceso denegado') ||
-                            _errorMessage!.contains('permisos')
+                        _errorMessage!.contains('permisos')
                         ? Icons.admin_panel_settings
                         : _errorMessage!.contains('sesión') ||
-                              _errorMessage!.contains('token')
+                        _errorMessage!.contains('token')
                         ? Icons.lock_outline
                         : Icons.error_outline,
                     size: 64,
@@ -612,7 +613,7 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
                     _errorMessage!.contains('Acceso denegado')
                         ? 'Acceso Restringido'
                         : _errorMessage!.contains('sesión') ||
-                              _errorMessage!.contains('token')
+                        _errorMessage!.contains('token')
                         ? 'Sesión Expirada'
                         : 'Error del Sistema',
                     style: const TextStyle(
@@ -670,10 +671,7 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
               _buildAdminInfoCard(),
             ],
 
-            if (_statistics != null) ...[
-              const SizedBox(height: 24),
-              _buildStatisticsSection(),
-            ],
+            // ESTADÍSTICAS ELIMINADAS DE AQUÍ PARA LA OTRA PANTALLA
 
             const SizedBox(height: 32),
             _buildAdminMenuOptions(),
@@ -856,158 +854,6 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
     );
   }
 
-  Widget _buildStatisticsSection() {
-    if (_statistics == null || _isStatisticsEmpty()) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade200),
-        ),
-        child: const Center(
-          child: Column(
-            children: [
-              Icon(
-                Icons.analytics_outlined,
-                size: 48,
-                color: AppColors.gray500,
-              ),
-              SizedBox(height: 8),
-              Text(
-                'Estadísticas no disponibles',
-                style: TextStyle(fontSize: 16, color: AppColors.gray500),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Icon(Icons.analytics, color: Colors.red, size: 20),
-            const SizedBox(width: 8),
-            const Text(
-              'Estadísticas del Sistema',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: AppColors.text,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        _buildStatisticsGrid(),
-      ],
-    );
-  }
-
-  bool _isStatisticsEmpty() {
-    return _statistics!.totalEdificios == 0 &&
-        _statistics!.edificiosEvaluados == 0 &&
-        _statistics!.edificiosPendientes == 0 &&
-        _statistics!.inspeccionesRealizadas == 0;
-  }
-
-  Widget _buildStatisticsGrid() {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                'Total Edificios',
-                _statistics!.totalEdificios.toString(),
-                Icons.apartment,
-                Colors.red,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
-                'Evaluados',
-                _statistics!.edificiosEvaluados.toString(),
-                Icons.check_circle,
-                Colors.green,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                'Pendientes',
-                _statistics!.edificiosPendientes.toString(),
-                Icons.pending,
-                Colors.orange,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
-                'Inspecciones',
-                _statistics!.inspeccionesRealizadas.toString(),
-                Icons.assignment,
-                Colors.blue,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatCard(
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-        border: Border.all(color: color.withOpacity(0.1)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          Text(
-            title,
-            style: const TextStyle(fontSize: 12, color: AppColors.gray500),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildAdminMenuOptions() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1027,6 +873,7 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
           ],
         ),
         const SizedBox(height: 16),
+        // PRIMERA FILA
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
@@ -1035,7 +882,7 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
               'Gestión de Edificios',
               'https://cdn-icons-png.flaticon.com/512/1441/1441359.png',
               Icons.apartment,
-              () {
+                  () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -1049,7 +896,7 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
               'Edificios Evaluados',
               'https://cdn-icons-png.flaticon.com/128/12218/12218407.png',
               Icons.assignment_turned_in,
-              () {
+                  () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -1058,12 +905,33 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
                 );
               },
             ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        // SEGUNDA FILA (Usuarios y Resumen)
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
             _buildAdminMenuOption(
               context,
               'Usuarios',
-              '',
+              'https://cdn-icons-png.flaticon.com/128/681/681494.png', // Icono añadido para que no se vea vacío/raro
               Icons.manage_accounts,
-              () => Navigator.pushNamed(context, '/administracion/usuarios'),
+                  () => Navigator.pushNamed(context, '/administracion/usuarios'),
+            ),
+            _buildAdminMenuOption(
+              context,
+              'Resumen General',
+              'https://cdn-icons-png.flaticon.com/128/1055/1055644.png',
+              Icons.bar_chart,
+                  () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const GeneralSummaryScreen(),
+                  ),
+                );
+              },
             ),
           ],
         ),
@@ -1087,14 +955,14 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
             icon: const Icon(Icons.person),
             onPressed: (_userId != null && _token != null)
                 ? () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            ProfileAdminScreen(userId: _userId, token: _token),
-                      ),
-                    );
-                  }
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      ProfileAdminScreen(userId: _userId, token: _token),
+                ),
+              );
+            }
                 : null,
             color: (_userId != null && _token != null)
                 ? AppColors.text
@@ -1107,12 +975,12 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
   }
 
   Widget _buildAdminMenuOption(
-    BuildContext context,
-    String title,
-    String imageUrl,
-    IconData fallbackIcon,
-    VoidCallback onTap,
-  ) {
+      BuildContext context,
+      String title,
+      String imageUrl,
+      IconData fallbackIcon,
+      VoidCallback onTap,
+      ) {
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -1163,7 +1031,7 @@ class _HomeAdminScreenState extends State<HomeAdminScreen> {
                   },
                   loadingBuilder: (context, child, loadingProgress) {
                     if (loadingProgress == null) return child;
-                    return Container(
+                    return SizedBox(
                       width: 60,
                       height: 60,
                       child: const Center(

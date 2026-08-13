@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/services/building_list_service.dart';
 import '../../data/models/building_list_response.dart';
-import 'building_detail_screen.dart'; // <-- Importamos la nueva pantalla
+import 'building_detail_screen.dart';
 
 class DashboardBuildingListScreen extends StatefulWidget {
   const DashboardBuildingListScreen({super.key});
@@ -82,35 +82,21 @@ class _DashboardBuildingListScreenState extends State<DashboardBuildingListScree
         child: Column(
           children: [
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    height: 50, // Ligeramente más alto
-                    decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(12)), // Bordes más redondeados
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: const InputDecoration(
-                          hintText: 'Buscar edificio...',
-                          hintStyle: TextStyle(color: Colors.grey),
-                          suffixIcon: Icon(Icons.search, color: Colors.grey, size: 22),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14)),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.tune, color: Colors.black87),
-                ),
-              ],
+            // BARRA DE BÚSQUEDA (El botón de filtros fue eliminado)
+            Container(
+              height: 50,
+              decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(12)),
+              child: TextField(
+                controller: _searchController,
+                decoration: const InputDecoration(
+                    hintText: 'Buscar edificio...',
+                    hintStyle: TextStyle(color: Colors.grey),
+                    suffixIcon: Icon(Icons.search, color: Colors.grey, size: 22),
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14)),
+              ),
             ),
             const SizedBox(height: 20),
             Expanded(
@@ -151,7 +137,6 @@ class _DashboardBuildingListScreenState extends State<DashboardBuildingListScree
     );
   }
 
-  // TARJETA AGRANDADA Y MEJORADA
   Widget _buildBuildingCard(BuildingData building) {
     final locationText = building.ciudad != null
         ? '${building.displayAddress}, ${building.ciudad}'
@@ -164,7 +149,7 @@ class _DashboardBuildingListScreenState extends State<DashboardBuildingListScree
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04), // Sombra suave
+            color: Colors.black.withOpacity(0.04),
             blurRadius: 10,
             spreadRadius: 0,
             offset: const Offset(0, 4),
@@ -177,26 +162,23 @@ class _DashboardBuildingListScreenState extends State<DashboardBuildingListScree
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: () {
-            // Navegar a la pantalla de detalles al tocar la tarjeta
             Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => BuildingDetailScreen(building: building),
               ),
             ).then((_) {
-              // Recargar al volver por si se eliminó o editó
               setState(() => _loading = true);
               _loadBuildings();
             });
           },
           child: Padding(
-            padding: const EdgeInsets.all(16.0), // Padding más generoso
+            padding: const EdgeInsets.all(16.0),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Imagen más grande
                 Container(
-                  width: 80, // Aumentado de 55 a 80
+                  width: 80,
                   height: 80,
                   decoration: BoxDecoration(
                       color: Colors.blueGrey.shade100,
@@ -214,11 +196,10 @@ class _DashboardBuildingListScreenState extends State<DashboardBuildingListScree
                       : const Icon(
                     Icons.image,
                     color: Colors.black54,
-                    size: 36, // Icono más grande
+                    size: 36,
                   ),
                 ),
                 const SizedBox(width: 16),
-                // Textos con mejor jerarquía
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -226,7 +207,7 @@ class _DashboardBuildingListScreenState extends State<DashboardBuildingListScree
                       Text(
                         building.displayName,
                         style: const TextStyle(
-                            fontSize: 16, // Más grande
+                            fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: Colors.black87),
                         maxLines: 1,

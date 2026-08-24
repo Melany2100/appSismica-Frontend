@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/ui/screens/add_helper_screen.dart';
 import 'package:flutter_application_1/ui/screens/building_registry_1_screen.dart';
 import 'package:flutter_application_1/ui/screens/home_admin_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -53,6 +54,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/': (_) => const SessionGate(),
         '/login': (_) => const LoginScreen(),
+        '/addHelper': (_) => const AuthGuard(child: AddHelperScreen()),
         '/assessed': (_) => const AuthGuard(child: AssessedBuildingsPage()),
         //'/roles/assign': (_) => const AssignRoleScreen(),
         '/buildingRegistry1': (_) =>

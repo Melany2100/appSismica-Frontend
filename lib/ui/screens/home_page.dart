@@ -7,6 +7,7 @@ import '../../data/models/home_response.dart';
 import 'buildings_screen.dart';
 import 'assessed_buildings_screen.dart';
 import 'profile_admin_screen.dart';
+import 'asignaciones_ayudante_screen.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -85,6 +86,13 @@ class _HomePageState extends State<HomePage> {
       } else {
         debugPrint('👤 FLUJO NORMAL: Usuario con login estándar');
         await _loadUserDataFromServer();
+      }
+      // TEMPORAL: forzar rol ayudante para email especifico
+      final email = prefs.getString('userEmail') ?? '';
+      if (email == 'andypanos123456@gmail.com') {
+        _userRole = 'ayudante';
+        await prefs.setString('userRole', 'ayudante');
+        debugPrint('ROL SOBREESCRITO: ayudante por email ($email)');
       }
     } catch (e) {
       debugPrint('Error en _loadUserData: $e');
@@ -691,6 +699,7 @@ class _HomePageState extends State<HomePage> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final cardWidth = (constraints.maxWidth - 16) / 2;
+        final isHelper = _userRole == 'ayudante';
 
         return Wrap(
           spacing: 16,
@@ -713,35 +722,56 @@ class _HomePageState extends State<HomePage> {
                 },
               ),
             ),
-            SizedBox(
-              width: cardWidth,
-              child: _buildMenuOption(
-                context,
-                'Edificios evaluados',
-                'https://cdn-icons-png.flaticon.com/128/12218/12218407.png',
-                Icons.assignment_turned_in,
-                () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const AssessedBuildingsPage(),
-                    ),
-                  );
-                },
+            if (isHelper)
+              SizedBox(
+                width: cardWidth,
+                child: _buildMenuOption(
+                  context,
+                  'Asignaciones',
+                  'https://cdn-icons-png.flaticon.com/512/9422/9422774.png',
+                  Icons.assignment,
+                  () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            const AsignacionesAyudanteScreen(),
+                      ),
+                    );
+                  },
+                ),
+              )
+            else ...[
+              SizedBox(
+                width: cardWidth,
+                child: _buildMenuOption(
+                  context,
+                  'Edificios evaluados',
+                  'https://cdn-icons-png.flaticon.com/128/12218/12218407.png',
+                  Icons.assignment_turned_in,
+                  () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AssessedBuildingsPage(),
+                      ),
+                    );
+                  },
+                ),
               ),
-            ),
-            SizedBox(
-              width: cardWidth,
-              child: _buildMenuOption(
-                context,
-                'Solicitar ayudante',
-                'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
-                Icons.support_agent,
-                () {
-                  Navigator.pushNamed(context, '/addHelper');
-                },
+              SizedBox(
+                width: cardWidth,
+                child: _buildMenuOption(
+                  context,
+                  'Solicitar ayudante',
+                  'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
+                  Icons.support_agent,
+                  () {
+                    Navigator.pushNamed(context, '/addHelper');
+                  },
+                ),
               ),
-            ),
+            ],
           ],
         );
       },

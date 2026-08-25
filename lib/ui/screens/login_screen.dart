@@ -82,6 +82,7 @@ class _LoginScreenState extends State<LoginScreen> {
         print('  - userId: $userId');
         print('  - userName: $userName');
         print('  - userRole: $userRole');
+        print('  - userEmail: ${email.text.trim()}');
 
         if (mounted) {
           // Mostrar mensaje de éxito

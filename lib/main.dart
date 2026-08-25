@@ -19,6 +19,7 @@ import '../../ui/screens/profile_page.dart';
 import '../../ui/screens/recovery_password.dart';
 import '../../ui/screens/register_screen.dart';
 import '../../ui/screens/user_list_screen.dart';
+import '../../ui/screens/asignaciones_ayudante_screen.dart';
 import 'ui/widgets/route_guards.dart';
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
@@ -84,6 +85,7 @@ class MyApp extends StatelessWidget {
         '/profileAdmin': (_) => const AdminGuard(child: ProfileAdminScreen()),
         '/profile': (_) => const AuthGuard(child: ProfilePage()),
         '/register': (context) => const RegisterScreen(),
+        '/asignaciones': (context) => const AsignacionesAyudanteScreen(),
         '/recovery': (context) => const RecoveryPasswordScreen(),
         '/userList': (context) => const AdminGuard(child: UserListScreen()),
         '/administracion/usuarios': (context) =>

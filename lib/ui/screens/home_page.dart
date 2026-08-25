@@ -7,6 +7,7 @@ import '../../data/models/home_response.dart';
 import 'buildings_screen.dart';
 import 'assessed_buildings_screen.dart';
 import 'profile_admin_screen.dart';
+import 'asignaciones_ayudante_screen.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -46,7 +47,8 @@ class _HomePageState extends State<HomePage> {
       });
 
       // DETECTAR ORIGEN DEL USUARIO - MEJORADO
-      final isFromRegistration = prefs.getBool('isFromRegistration') ?? false; // Nuevo flag
+      final isFromRegistration =
+          prefs.getBool('isFromRegistration') ?? false; // Nuevo flag
       final isFirstLogin = prefs.getBool('isFirstLogin') ?? false;
       final registrationSource = prefs.getString('registrationSource');
 
@@ -85,7 +87,13 @@ class _HomePageState extends State<HomePage> {
         debugPrint('👤 FLUJO NORMAL: Usuario con login estándar');
         await _loadUserDataFromServer();
       }
-
+      // TEMPORAL: forzar rol ayudante para email especifico
+      final email = prefs.getString('userEmail') ?? '';
+      if (email == 'andypanos123456@gmail.com') {
+        _userRole = 'ayudante';
+        await prefs.setString('userRole', 'ayudante');
+        debugPrint('ROL SOBREESCRITO: ayudante por email ($email)');
+      }
     } catch (e) {
       debugPrint('Error en _loadUserData: $e');
       setState(() {
@@ -95,10 +103,12 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-// NUEVO MÉTODO: Específico para usuarios recién registrados
+  // NUEVO MÉTODO: Específico para usuarios recién registrados
   Future<void> _loadUserDataFromRegistrationWithFallback() async {
     try {
-      debugPrint('REGISTRO RECIENTE - Cargando datos del usuario recién registrado...');
+      debugPrint(
+        'REGISTRO RECIENTE - Cargando datos del usuario recién registrado...',
+      );
 
       final prefs = await SharedPreferences.getInstance();
 
@@ -125,7 +135,9 @@ class _HomePageState extends State<HomePage> {
         );
 
         if (response.success && response.data != null) {
-          debugPrint('REGISTRO RECIENTE - Datos del servidor obtenidos exitosamente');
+          debugPrint(
+            'REGISTRO RECIENTE - Datos del servidor obtenidos exitosamente',
+          );
           final userData = response.data!;
 
           setState(() {
@@ -182,7 +194,9 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   const Icon(Icons.celebration, color: Colors.white),
                   const SizedBox(width: 8),
-                  Text('¡Bienvenido $_userName! Registro completado exitosamente.'),
+                  Text(
+                    '¡Bienvenido $_userName! Registro completado exitosamente.',
+                  ),
                 ],
               ),
               backgroundColor: Colors.green,
@@ -191,7 +205,6 @@ class _HomePageState extends State<HomePage> {
           );
         }
       }
-
     } catch (e) {
       debugPrint('REGISTRO RECIENTE - Error: $e');
       setState(() {
@@ -200,7 +213,6 @@ class _HomePageState extends State<HomePage> {
       });
     }
   }
-
 
   Future<void> _loadUserDataFromServer() async {
     if (_token == null || _userId == null) {
@@ -244,13 +256,17 @@ class _HomePageState extends State<HomePage> {
         debugPrint('  - Usuario: $_userName');
         debugPrint('  - Rol: ${_userInfo?.rol}');
         debugPrint('  - Email: ${_userInfo?.email}');
-
       } else {
-        debugPrint('Error en respuesta del servidor: ${response.error ?? response.message}');
+        debugPrint(
+          'Error en respuesta del servidor: ${response.error ?? response.message}',
+        );
 
         // Si es un error 404 o 401, podría ser que el token expiró
-        if (response.error?.contains('404') == true || response.error?.contains('401') == true) {
-          _handleInvalidSession('Sesión expirada. Por favor, inicie sesión nuevamente');
+        if (response.error?.contains('404') == true ||
+            response.error?.contains('401') == true) {
+          _handleInvalidSession(
+            'Sesión expirada. Por favor, inicie sesión nuevamente',
+          );
           return;
         }
 
@@ -304,13 +320,13 @@ class _HomePageState extends State<HomePage> {
 
         await _updateSharedPreferences(userData.userInfo);
         debugPrint('REGISTRO - Datos del servidor cargados exitosamente');
-
       } else {
         // FALLÓ HOMESERVICE - USAR FALLBACK CON DATOS LOCALES
-        debugPrint('REGISTRO - HomeService falló, usando fallback con datos locales');
+        debugPrint(
+          'REGISTRO - HomeService falló, usando fallback con datos locales',
+        );
         await _loadUserDataWithLocalFallback();
       }
-
     } catch (e) {
       debugPrint('REGISTRO - Error cargando del servidor: $e');
       // FALLBACK CON DATOS LOCALES
@@ -357,13 +373,14 @@ class _HomePageState extends State<HomePage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('¡Registro exitoso! Algunos datos se actualizarán en el próximo uso.'),
+            content: Text(
+              '¡Registro exitoso! Algunos datos se actualizarán en el próximo uso.',
+            ),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 3),
           ),
         );
       }
-
     } catch (e) {
       debugPrint('REGISTRO - Error en fallback local: $e');
       setState(() {
@@ -491,7 +508,10 @@ class _HomePageState extends State<HomePage> {
                 _logout();
               },
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: const Text('Cerrar sesión', style: TextStyle(color: Colors.white)),
+              child: const Text(
+                'Cerrar sesión',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         );
@@ -525,7 +545,8 @@ class _HomePageState extends State<HomePage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    _errorMessage!.contains('sesión') || _errorMessage!.contains('token')
+                    _errorMessage!.contains('sesión') ||
+                            _errorMessage!.contains('token')
                         ? Icons.lock_outline
                         : Icons.error_outline,
                     size: 64,
@@ -533,7 +554,8 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    _errorMessage!.contains('sesión') || _errorMessage!.contains('token')
+                    _errorMessage!.contains('sesión') ||
+                            _errorMessage!.contains('token')
                         ? 'Sesión expirada'
                         : 'Error al cargar datos',
                     style: const TextStyle(
@@ -555,7 +577,8 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  if (!_errorMessage!.contains('sesión') && !_errorMessage!.contains('token'))
+                  if (!_errorMessage!.contains('sesión') &&
+                      !_errorMessage!.contains('token'))
                     ElevatedButton(
                       onPressed: _refreshData,
                       child: const Text('Reintentar'),
@@ -638,10 +661,7 @@ class _HomePageState extends State<HomePage> {
                   Expanded(
                     child: Text(
                       _userInfo!.email,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.blue,
-                      ),
+                      style: const TextStyle(fontSize: 12, color: Colors.blue),
                     ),
                   ),
                 ],
@@ -656,7 +676,9 @@ class _HomePageState extends State<HomePage> {
               decoration: BoxDecoration(
                 color: _getRoleColor(_userRole!).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: _getRoleColor(_userRole!).withOpacity(0.3)),
+                border: Border.all(
+                  color: _getRoleColor(_userRole!).withOpacity(0.3),
+                ),
               ),
               child: Text(
                 _getRoleDisplayName(_userRole!),
@@ -674,34 +696,85 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildMenuOptions() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        _buildMenuOption(
-          context,
-          'Edificios registrados',
-          'https://cdn-icons-png.flaticon.com/512/1441/1441359.png',
-          Icons.apartment,
-              () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const BuildingsScreen()),
-            );
-          },
-        ),
-        _buildMenuOption(
-          context,
-          'Edificios evaluados',
-          'https://cdn-icons-png.flaticon.com/128/12218/12218407.png',
-          Icons.assignment_turned_in,
-              () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const AssessedBuildingsPage()),
-            );
-          },
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cardWidth = (constraints.maxWidth - 16) / 2;
+        final isHelper = _userRole == 'ayudante';
+
+        return Wrap(
+          spacing: 16,
+          runSpacing: 16,
+          children: [
+            SizedBox(
+              width: cardWidth,
+              child: _buildMenuOption(
+                context,
+                'Edificios registrados',
+                'https://cdn-icons-png.flaticon.com/512/1441/1441359.png',
+                Icons.apartment,
+                () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const BuildingsScreen(),
+                    ),
+                  );
+                },
+              ),
+            ),
+            if (isHelper)
+              SizedBox(
+                width: cardWidth,
+                child: _buildMenuOption(
+                  context,
+                  'Asignaciones',
+                  'https://cdn-icons-png.flaticon.com/512/9422/9422774.png',
+                  Icons.assignment,
+                  () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            const AsignacionesAyudanteScreen(),
+                      ),
+                    );
+                  },
+                ),
+              )
+            else ...[
+              SizedBox(
+                width: cardWidth,
+                child: _buildMenuOption(
+                  context,
+                  'Edificios evaluados',
+                  'https://cdn-icons-png.flaticon.com/128/12218/12218407.png',
+                  Icons.assignment_turned_in,
+                  () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AssessedBuildingsPage(),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              SizedBox(
+                width: cardWidth,
+                child: _buildMenuOption(
+                  context,
+                  'Solicitar ayudante',
+                  'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
+                  Icons.support_agent,
+                  () {
+                    Navigator.pushNamed(context, '/addHelper');
+                  },
+                ),
+              ),
+            ],
+          ],
+        );
+      },
     );
   }
 
@@ -721,16 +794,14 @@ class _HomePageState extends State<HomePage> {
             icon: const Icon(Icons.person),
             onPressed: (_userId != null && _token != null)
                 ? () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ProfileAdminScreen(
-                    userId: _userId,
-                    token: _token,
-                  ),
-                ),
-              );
-            }
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            ProfileAdminScreen(userId: _userId, token: _token),
+                      ),
+                    );
+                  }
                 : null,
             color: (_userId != null && _token != null)
                 ? AppColors.text
@@ -743,77 +814,70 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildMenuOption(
-      BuildContext context,
-      String title,
-      String imageUrl,
-      IconData fallbackIcon,
-      VoidCallback onTap,
-      ) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          margin: const EdgeInsets.symmetric(horizontal: 8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                spreadRadius: 1,
-                blurRadius: 4,
-                offset: const Offset(0, 2),
+    BuildContext context,
+    String title,
+    String imageUrl,
+    IconData fallbackIcon,
+    VoidCallback onTap,
+  ) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withValues(alpha: 0.1),
+              spreadRadius: 1,
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.network(
+              imageUrl,
+              width: 60,
+              height: 60,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(fallbackIcon, size: 30, color: AppColors.primary),
+                );
+              },
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return const SizedBox(
+                  width: 60,
+                  height: 60,
+                  child: Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.text,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
               ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Image.network(
-                imageUrl,
-                width: 60,
-                height: 60,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      fallbackIcon,
-                      size: 30,
-                      color: AppColors.primary,
-                    ),
-                  );
-                },
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Container(
-                    width: 60,
-                    height: 60,
-                    child: const Center(
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: AppColors.text,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ),
       ),
     );

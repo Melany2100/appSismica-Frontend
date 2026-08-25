@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/ui/screens/add_helper_screen.dart';
 import 'package:flutter_application_1/ui/screens/building_registry_1_screen.dart';
 import 'package:flutter_application_1/ui/screens/home_admin_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -18,6 +19,7 @@ import '../../ui/screens/profile_page.dart';
 import '../../ui/screens/recovery_password.dart';
 import '../../ui/screens/register_screen.dart';
 import '../../ui/screens/user_list_screen.dart';
+import '../../ui/screens/asignaciones_ayudante_screen.dart';
 import 'ui/widgets/route_guards.dart';
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
@@ -53,6 +55,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/': (_) => const SessionGate(),
         '/login': (_) => const LoginScreen(),
+        '/addHelper': (_) => const AuthGuard(child: AddHelperScreen()),
         '/assessed': (_) => const AuthGuard(child: AssessedBuildingsPage()),
         //'/roles/assign': (_) => const AssignRoleScreen(),
         '/buildingRegistry1': (_) =>
@@ -82,6 +85,7 @@ class MyApp extends StatelessWidget {
         '/profileAdmin': (_) => const AdminGuard(child: ProfileAdminScreen()),
         '/profile': (_) => const AuthGuard(child: ProfilePage()),
         '/register': (context) => const RegisterScreen(),
+        '/asignaciones': (context) => const AsignacionesAyudanteScreen(),
         '/recovery': (context) => const RecoveryPasswordScreen(),
         '/userList': (context) => const AdminGuard(child: UserListScreen()),
         '/administracion/usuarios': (context) =>

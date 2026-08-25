@@ -1,9 +1,8 @@
 class DatabaseConfig {
-  /// Usa Render por defecto. Para probar el backend local:
-  /// flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000
+  /// Backend local accesible desde teléfono físico en la misma red Wi-Fi.
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://backend-vinculacionsismica.onrender.com',
+    defaultValue: 'http://192.168.18.19:3000',
   );
 
   /// Render Free puede tardar más de 50 segundos en despertar. El valor
